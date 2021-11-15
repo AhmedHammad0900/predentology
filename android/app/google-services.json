@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "691231482269",
+    "project_id": "prepdent-f0927",
+    "storage_bucket": "prepdent-f0927.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:691231482269:android:0ac65505857aac7ea00f74",
+        "android_client_info": {
+          "package_name": "hammad.com.predent"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "691231482269-3gks4ik088k8vjrcdv0i3a83d3k7ilv3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "hammad.com.predent",
+            "certificate_hash": "5ab2f7c727cc115044cca9b034df5457ddcd284c"
+          }
+        },
+        {
+          "client_id": "691231482269-u5j6a0pg9dokhlito6bh0ue9bjts0bga.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBM8l1YEpapYE2PlURHTH3PL2ldKS6Z1Fk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "691231482269-u5j6a0pg9dokhlito6bh0ue9bjts0bga.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "691231482269-qe0vl7fkaaj7uk8qjstrjonqknf2e9q9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "prepdent.hammad.com.prepdent"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
