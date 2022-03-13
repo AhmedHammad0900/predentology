@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <domain-config>
+        <domain includeSubdomains="true">hammaddev.tk</domain>
+        <domain includeSubdomains="true">hammadpanel.tk</domain>
+        <trust-anchors>
+            <certificates src="@raw/hammaddev"/>
+            <certificates src="@raw/hammadpanel"/>
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

@@ -1,4 +1,4 @@
-package hammad.com.predent
+package com.firstdentology.hammad
 
 import io.flutter.embedding.android.FlutterActivity
 

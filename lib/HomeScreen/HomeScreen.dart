@@ -15,8 +15,11 @@ import 'package:predent/main.dart';
 import 'dart:core';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'dart:async';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:flutter/services.dart';
+
+import 'package:predent/AllCourses/AllCourses.dart';
 
 enum stats {
   AllCourses,
@@ -25,7 +28,10 @@ enum stats {
   Marked,
 }
 
+List filternames = [];
+List filternames2 = [];
 stats currentButton = stats.AllCourses;
+var GetAccountEmail;
 
 final key1 = UniqueKey();
 final key2 = UniqueKey();
@@ -112,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String displayName = "";
   String CheckInterface = "";
   late String jailbreakmethod;
-
+  var GetMySubjects;
   late bool jailbroken;
   late bool developerMode;
   String photoUrl = 'nopic';
@@ -123,10 +129,12 @@ class _HomeScreenState extends State<HomeScreen> {
   late bool RealDeviceCheckPoint;
 
   var futs;
+  var SubjectsList;
 
   @override
   void initState() {
     super.initState();
+    GetAccount();
     isRealDevice();
     Favoutire();
   }
@@ -291,8 +299,7 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Colors.blue,
             child: WillPopScope(
                 onWillPop: () async => false,
-                child:
-                    Scaffold(drawer: Drawer(), appBar: topBar(), body: Body())),
+                child: Scaffold(appBar: topBar(), body: Body())),
           );
         }
 
@@ -412,58 +419,73 @@ class _HomeScreenState extends State<HomeScreen> {
 
   CheckSameUser() async {
     await checkSSL(dotenv.env['API_SSL']!);
-    final Serial = await database.listDocuments(
-        collectionId: dotenv.env['SERIALS_COLLECTION_ID']!);
-    if (Serial.sum != 0) {
-      if (RealDeviceCheckPoint == false ) {
-        CheckInterface = "emulator";
-        database.updateDocument(
-          collectionId: dotenv.env['SERIALS_COLLECTION_ID']!,
-          documentId: Serial.documents[0].$id,
-          data: {"deviceId": "emulator"},
-        );
-      } else if (jailbreakmethod == "root") {
-        CheckInterface = "root";
-        database.updateDocument(
-          collectionId: dotenv.env['SERIALS_COLLECTION_ID']!,
-          documentId: Serial.documents[0].$id,
-          data: {"deviceId": "root"},
-        );
-      } else {
-        await getDeviceId();
-        deviceID = await Serial.documents[0].data['deviceId'];
-        if (await deviceID == deviceIdLocal) {
-          await setuserInfo();
-          setState(() {
-            SwitchBetweenButtons();
-          });
-          return Serial.documents[0];
-        } else if (deviceID == "new") {
-          try {
-            await database.updateDocument(
-              collectionId: dotenv.env['SERIALS_COLLECTION_ID']!,
-              documentId: Serial.documents[0].$id,
-              data: {"deviceId": deviceIdLocal},
-            );
-          } catch (e) {}
-          await setuserInfo();
-          setState(() {
-            SwitchBetweenButtons();
-          });
-          return Serial.documents[0];
+    if (checkedSSL == true) {
+      final Serial = await database.listDocuments(
+          collectionId: dotenv.env['SERIALS_COLLECTION_ID']!);
+      if (Serial.total != 0) {
+        if (RealDeviceCheckPoint == true) {
+          CheckInterface = "emulator";
+          database.updateDocument(
+            collectionId: dotenv.env['SERIALS_COLLECTION_ID']!,
+            documentId: Serial.documents[0].$id,
+            data: {"deviceId": "emulator"},
+          );
+        } else if (jailbreakmethod == "root") {
+          CheckInterface = "root";
+          database.updateDocument(
+            collectionId: dotenv.env['SERIALS_COLLECTION_ID']!,
+            documentId: Serial.documents[0].$id,
+            data: {"deviceId": "root"},
+          );
+        } else if (Root == "root1") {
+          CheckInterface = "root";
+          database.updateDocument(
+            collectionId: dotenv.env['SERIALS_COLLECTION_ID']!,
+            documentId: Serial.documents[0].$id,
+            data: {"deviceId": "root"},
+          );
         } else {
-          /// 2 devices
-          CheckInterface = "2Devices";
+          await getDeviceId();
+          deviceID = await Serial.documents[0].data['deviceId'];
+          if (await deviceID == deviceIdLocal) {
+            // await setuserInfo();
+            setState(() {
+              SwitchBetweenButtons();
+            });
+            SubjectsList = await RecentlyCourses();
+            GetMySubjects = await LoadMySubject();
+            LoadCoursesVar = LoadCourses();
+            return Serial.documents[0];
+          } else if (deviceID == "new") {
+            try {
+              await database.updateDocument(
+                collectionId: dotenv.env['SERIALS_COLLECTION_ID']!,
+                documentId: Serial.documents[0].$id,
+                data: {"deviceId": deviceIdLocal},
+              );
+            } catch (e) {}
+            // await setuserInfo();
+            setState(() {
+              SwitchBetweenButtons();
+            });
+            SubjectsList = await RecentlyCourses();
+            GetMySubjects = await LoadMySubject();
+            LoadCoursesVar = LoadCourses();
+            return Serial.documents[0];
+          } else {
+            /// 2 devices
+            CheckInterface = "2Devices";
+          }
+          setState(() {});
+          return Serial.documents[0];
         }
-        setState(() {});
-        return Serial.documents[0];
+      } else {
+        CheckInterface = "notreg";
+        return null;
       }
-    } else {
-      CheckInterface = "notreg";
-      return null ;
-    }
 
-    return Serial.documents[0];
+      return Serial.documents[0];
+    }
   }
 
   setuserInfo() async {
@@ -529,7 +551,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget Body() {
     return Padding(
-      padding: EdgeInsets.only(top: 8),
+      padding: EdgeInsets.only(top: 8.h),
       child: Stack(
         children: [
           BackGround(),
@@ -538,7 +560,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(top: 24.0, left: 35),
+                  padding: EdgeInsets.only(top: 24.h, left: 35.w),
                   child: Row(
                     children: [
                       SearchBar(),
@@ -548,9 +570,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 // Courses Title
                 Padding(
-                  padding: const EdgeInsets.only(
-                    top: 20.0,
-                    left: 35,
+                  padding: EdgeInsets.only(
+                    top: 18.w,
+                    left: 32.w,
                   ),
                   child: Text(
                     "Courses",
@@ -565,7 +587,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(left: 25.0, top: 20),
+                      padding: EdgeInsets.only(left: 27.w, top: 20.h),
                       child: RoundedButton(
                         amountofradius: 25,
                         primary: firstButtonBackGround,
@@ -591,11 +613,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             Padding(
                               padding: const EdgeInsets.only(left: 10.0),
                               child: Text(
-                                "All Courses",
+                                "Recently",
                                 style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w400,
-                                    fontSize: 15,
+                                    fontSize: 14.sp,
                                     color: firstButtonText),
                               ),
                             )
@@ -604,13 +626,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(left: 22.0, top: 20),
+                      padding: EdgeInsets.only(left: 20.w, top: 20.h),
                       child: RoundedButton(
                         amountofradius: 25,
                         primary: secondButtonBackGround,
                         press: () {
                           currentButton = stats.MyCourses;
-                          SwitchBetweenButtons();
+                          Navigator.of(context)
+                              .push(_createRoute(AllCourses()));
                         },
                         width: 170,
                         height: 58,
@@ -631,11 +654,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             Padding(
                               padding: const EdgeInsets.only(left: 10.0),
                               child: Text(
-                                "Lectures",
+                                "All Courses",
                                 style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w400,
-                                    fontSize: 15,
+                                    fontSize: 14.sp,
                                     color: secondButtonText),
                               ),
                             )
@@ -648,7 +671,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Padding(
-                      padding: const EdgeInsets.only(left: 25.0, top: 20),
+                      padding: EdgeInsets.only(left: 27.w, top: 20.h),
                       child: RoundedButton(
                         amountofradius: 25,
                         primary: thirdButtonBackGround,
@@ -673,13 +696,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.only(left: 10.0),
+                              padding: EdgeInsets.only(left: 10.0),
                               child: Text(
-                                "Practical",
+                                "My Courses",
                                 style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w400,
-                                    fontSize: 15,
+                                    fontSize: 14.sp,
                                     color: thirdButtonText),
                               ),
                             )
@@ -688,7 +711,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     Padding(
-                      padding: const EdgeInsets.only(left: 22.0, top: 20),
+                      padding: EdgeInsets.only(left: 20.w, top: 20.h),
                       child: RoundedButton(
                         amountofradius: 25,
                         primary: forthButtonBackGround,
@@ -730,428 +753,15 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 20.0, left: 25),
+                  padding: EdgeInsets.only(top: 20.h, left: 25.w),
                   child: Container(
-                    width: double.infinity,
-                    height: 270,
-                    child: ListView(
-                      physics: BouncingScrollPhysics(),
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        Visibility(
-                          visible: showTextCenter,
-                          child: Center(
-                            child: Text("You Have No Subscribed Subjects Here"),
-                          ),
-                        ),
-                        Subject(
-                          'assests/materiallec.png',
-                          'Dental Materials',
-                          'Dr.Amr Mamdouh',
-                          Color(0xff57b8eb),
-                          () {
-                            if (material != "0000" && checkedSSL == true) {
-                              try {
-                                heightofpic = 150;
-                                widthofpic = 145;
-                                currentButton == stats.Practical
-                                    ? intialindex = 1
-                                    : intialindex = 0;
-                                ImagetoShow = "assests/1.png";
-                                buttonColor = Color(0xff57b8eb);
-                                subjectaccess = material;
-                                subjectname = "material";
-                                Navigator.of(context).push(_createRoute());
-                              } catch (e) {
-                                print('Error');
-                              }
-                            } else
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                      'You Have No Access for this Subject'),
-                                  backgroundColor: Color(0xff57b8eb),
-                                  action: SnackBarAction(
-                                    label: 'Ok',
-                                    textColor: Colors.black,
-                                    onPressed: () {
-                                      // Code to execute.
-                                    },
-                                  ),
-                                ),
-                              );
-                          },
-                          materialvisibile,
-                          firstFavourite,
-                          () async {
-                            final SharedPreferences prefs =
-                                await SharedPreferences.getInstance();
-                            setState(() {
-                              if (prefs.getString("material") == "Favourite") {
-                                firstFavourite = Icon(
-                                    Icons.star_border_outlined,
-                                    size: 35,
-                                    color: Colors.white);
-                                prefs.remove("material");
-                              } else {
-                                firstFavourite = Icon(Icons.star,
-                                    size: 35, color: Colors.white);
-                                prefs.setString("material", "Favourite");
-                              }
-                            });
-                          },
-                        ),
-                        Subject(
-                          'assests/2.png',
-                          'Morphology',
-                          'Dr.Mohammed Ramzy',
-                          Color(0xffF9AF2A),
-                          () async {
-                            if (morphology != "0000" && checkedSSL == true) {
-                              try {
-                                heightofpic = 150;
-                                widthofpic = 150;
-                                currentButton == stats.Practical
-                                    ? intialindex = 1
-                                    : intialindex = 0;
-                                ImagetoShow = "assests/2.png";
-                                buttonColor = Color(0xffF9AF2A);
-                                subjectaccess = morphology;
-                                subjectname = "morphology";
-                                Navigator.of(context).push(_createRoute());
-                              } catch (e) {
-                                print('Error');
-                              }
-                            } else
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                      'You Have No Access for this Subject'),
-                                  backgroundColor: Color(0xffF9AF2A),
-                                  action: SnackBarAction(
-                                    label: 'Ok',
-                                    textColor: Colors.black,
-                                    onPressed: () {
-                                      // Code to execute.
-                                    },
-                                  ),
-                                ),
-                              );
-                          },
-                          morphologyvisible,
-                          secondFavourite,
-                          () async {
-                            final SharedPreferences prefs =
-                                await SharedPreferences.getInstance();
-                            setState(() {
-                              if (prefs.getString("morphology") ==
-                                  "Favourite") {
-                                secondFavourite = Icon(
-                                    Icons.star_border_outlined,
-                                    size: 35,
-                                    color: Colors.white);
-                                prefs.remove("morphology");
-                              } else {
-                                secondFavourite = Icon(Icons.star,
-                                    size: 35, color: Colors.white);
-                                prefs.setString("morphology", "Favourite");
-                              }
-                            });
-                          },
-                        ),
-                        Subject(
-                          'assests/3.png',
-                          'Anatomy & Histo',
-                          'Dr.Mohammed Ramzy',
-                          Color(0xff737FB4),
-                          () {
-                            if (anatomy != "0000" && checkedSSL == true) {
-                              try {
-                                heightofpic = 150;
-                                widthofpic = 150;
-                                currentButton == stats.Practical
-                                    ? intialindex = 1
-                                    : intialindex = 0;
-                                ImagetoShow = "assests/3.png";
-                                buttonColor = Color(0xff737FB4);
-                                subjectaccess = anatomy;
-                                subjectname = "anatomy";
-                                Navigator.of(context).push(_createRoute());
-                              } catch (e) {
-                                print('Error');
-                              }
-                            } else
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                      'You Have No Access for this Subject'),
-                                  backgroundColor: Color(0xff737FB4),
-                                  action: SnackBarAction(
-                                    label: 'Ok',
-                                    textColor: Colors.black,
-                                    onPressed: () {
-                                      // Code to execute.
-                                    },
-                                  ),
-                                ),
-                              );
-                          },
-                          anatomyvisibile,
-                          thirdFavourite,
-                          () async {
-                            final SharedPreferences prefs =
-                                await SharedPreferences.getInstance();
-                            setState(() {
-                              if (prefs.getString("anatomy") == "Favourite") {
-                                thirdFavourite = Icon(
-                                    Icons.star_border_outlined,
-                                    size: 35,
-                                    color: Colors.white);
-                                prefs.remove("anatomy");
-                              } else {
-                                thirdFavourite = Icon(Icons.star,
-                                    size: 35, color: Colors.white);
-                                prefs.setString("anatomy", "Favourite");
-                              }
-                            });
-                          },
-                        ),
-                        Subject(
-                          'assests/4.png',
-                          'Material 48',
-                          'Dr.Amr Mamdouh',
-                          Color(0xff54AD66),
-                          () {
-                            if (histology != "0000" && checkedSSL == true) {
-                              try {
-                                heightofpic = 150;
-                                widthofpic = 150;
-                                currentButton == stats.Practical
-                                    ? intialindex = 1
-                                    : intialindex = 0;
-                                ImagetoShow = "assests/4.png";
-                                buttonColor = Color(0xff54AD66);
-                                subjectaccess = histology;
-                                subjectname = "histology";
-                                Navigator.of(context).push(_createRoute());
-                              } catch (e) {
-                                print('Error');
-                              }
-                            } else
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                      'You Have No Access for this Subject'),
-                                  backgroundColor: Color(0xff54AD66),
-                                  action: SnackBarAction(
-                                    label: 'Ok',
-                                    textColor: Colors.black,
-                                    onPressed: () {
-                                      // Code to execute.
-                                    },
-                                  ),
-                                ),
-                              );
-                          },
-                          histologyvisible,
-                          forthFavourite,
-                          () async {
-                            final SharedPreferences prefs =
-                                await SharedPreferences.getInstance();
-                            setState(() {
-                              if (prefs.getString("histology") == "Favourite") {
-                                forthFavourite = Icon(
-                                    Icons.star_border_outlined,
-                                    size: 35,
-                                    color: Colors.white);
-                                prefs.remove("histology");
-                              } else {
-                                forthFavourite = Icon(Icons.star,
-                                    size: 35, color: Colors.white);
-                                prefs.setString("histology", "Favourite");
-                              }
-                            });
-                          },
-                        ),
-                        Subject(
-                          'assests/5.png',
-                          'Head & Neck',
-                          'Dr.Mohammed Ramzy',
-                          Color(0xff5DD1D1),
-                          () {
-                            if (chemistry != "0000" && checkedSSL == true) {
-                              try {
-                                bottomposition = 10;
-                                heightofpic = 150;
-                                widthofpic = 150;
-                                currentButton == stats.Practical
-                                    ? intialindex = 1
-                                    : intialindex = 0;
-                                ImagetoShow = "assests/5.png";
-                                buttonColor = Color(0xff5DD1D1);
-                                subjectaccess = chemistry;
-                                subjectname = "chemistry";
-                                Navigator.of(context).push(_createRoute());
-                              } catch (e) {
-                                print('Error');
-                              }
-                            } else
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                      'You Have No Access for this Subject'),
-                                  backgroundColor: Color(0xff5DD1D1),
-                                  action: SnackBarAction(
-                                    label: 'Ok',
-                                    textColor: Colors.black,
-                                    onPressed: () {
-                                      // Code to execute.
-                                    },
-                                  ),
-                                ),
-                              );
-                          },
-                          chemistryvisible,
-                          fifthFavourite,
-                          () async {
-                            final SharedPreferences prefs =
-                                await SharedPreferences.getInstance();
-                            setState(() {
-                              if (prefs.getString("chemistry") == "Favourite") {
-                                fifthFavourite = Icon(
-                                    Icons.star_border_outlined,
-                                    size: 35,
-                                    color: Colors.white);
-                                prefs.remove("chemistry");
-                              } else {
-                                fifthFavourite = Icon(Icons.star,
-                                    size: 35, color: Colors.white);
-                                prefs.setString("chemistry", "Favourite");
-                              }
-                            });
-                          },
-                        ),
-                        Subject(
-                          'assests/6.png',
-                          'Physiology',
-                          'Dr.Omar Fawzy',
-                          Color(0xff4E97EB),
-                          () {
-                            if (physics != "0000" && checkedSSL == true) {
-                              try {
-                                bottomposition = 10;
-                                heightofpic = 150;
-                                widthofpic = 150;
-                                currentButton == stats.Practical
-                                    ? intialindex = 1
-                                    : intialindex = 0;
-                                ImagetoShow = "assests/6.png";
-                                buttonColor = Color(0xff4E97EB);
-                                subjectaccess = physics;
-                                subjectname = "physics";
-                                Navigator.of(context).push(_createRoute());
-                              } catch (e) {
-                                print('Error');
-                              }
-                            } else
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                      'You Have No Access for this Subject'),
-                                  backgroundColor: Color(0xff4E97EB),
-                                  action: SnackBarAction(
-                                    label: 'Ok',
-                                    textColor: Colors.black,
-                                    onPressed: () {
-                                      // Code to execute.
-                                    },
-                                  ),
-                                ),
-                              );
-                          },
-                          physicsvisibile,
-                          sixthFavourite,
-                          () async {
-                            final SharedPreferences prefs =
-                                await SharedPreferences.getInstance();
-                            setState(() {
-                              if (prefs.getString("physics") == "Favourite") {
-                                sixthFavourite = Icon(
-                                    Icons.star_border_outlined,
-                                    size: 35,
-                                    color: Colors.white);
-                                prefs.remove("physics");
-                              } else {
-                                sixthFavourite = Icon(Icons.star,
-                                    size: 35, color: Colors.white);
-                                prefs.setString("physics", "Favourite");
-                              }
-                            });
-                          },
-                        ),
-                        Subject(
-                          'assests/7.png',
-                          'Pathology',
-                          'Dr.Omar Fawzy',
-                          Color(0xffD390EC),
-                          () {
-                            if (zoology != "0000" && checkedSSL == true) {
-                              try {
-                                bottomposition = -2;
-                                heightofpic = 170;
-                                widthofpic = 150;
-                                currentButton == stats.Practical
-                                    ? intialindex = 1
-                                    : intialindex = 0;
-                                ImagetoShow = "assests/7.png";
-                                buttonColor = Color(0xffD390EC);
-                                subjectaccess = zoology;
-                                subjectname = "zoology";
-                                Navigator.of(context).push(_createRoute());
-                              } catch (e) {
-                                print('Error');
-                              }
-                            } else
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: const Text(
-                                      'You Have No Access for this Subject'),
-                                  backgroundColor: Color(0xffD390EC),
-                                  action: SnackBarAction(
-                                    label: 'Ok',
-                                    textColor: Colors.black,
-                                    onPressed: () {
-                                      // Code to execute.
-                                    },
-                                  ),
-                                ),
-                              );
-                          },
-                          zoologyvisible,
-                          seventhFavourite,
-                          () async {
-                            final SharedPreferences prefs =
-                                await SharedPreferences.getInstance();
-                            setState(
-                              () {
-                                if (prefs.getString("zoology") == "Favourite") {
-                                  seventhFavourite = Icon(
-                                      Icons.star_border_outlined,
-                                      size: 35,
-                                      color: Colors.white);
-                                  prefs.remove("zoology");
-                                } else {
-                                  seventhFavourite = Icon(Icons.star,
-                                      size: 35, color: Colors.white);
-                                  prefs.setString("zoology", "Favourite");
-                                }
-                              },
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+                      width: double.infinity,
+                      height: 270,
+                      child: currentButton == stats.AllCourses
+                          ? SubjectCardList()
+                          : currentButton == stats.Practical
+                              ? MySubjects()
+                              : SubjectCardList()),
                 ),
               ],
             ),
@@ -1509,7 +1119,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void ThirdActivated() {
     setState(() {
-      Practical();
       thirdButtonIconBackGroundColor = Colors.white;
 
       if (firstButtonIconBackGroundColor != Color(0xff54C0FB)) {
@@ -1650,6 +1259,464 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       futs = CheckSameUser();
     });
+  }
+
+  GetAccount() async {
+    GetAccountEmail = await account.get();
+  }
+
+  Widget MySubjects() {
+    return FutureBuilder<dynamic>(
+        future: teams.list(),
+        builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+          if (snapshot.connectionState == ConnectionState.done &&
+              checkedSSL == true) {
+            return ListView.builder(
+              physics: BouncingScrollPhysics(),
+              scrollDirection: Axis.horizontal,
+              itemCount: snapshot.data.teams.length,
+              itemBuilder: (context, i) {
+                return Subject(
+                  'assests/materiallec.png',
+                  snapshot.data.teams[i].name,
+                  "",
+                  Color(0xff57b8eb),
+                  () {
+                    if (checkedSSL == true) {
+                      try {
+                        heightofpic = 150;
+                        widthofpic = 145;
+
+                        ImagetoShow = "assests/1.png";
+                        buttonColor = Color(0xff57b8eb);
+                        subjectaccess = "1111";
+                        subjectname = snapshot.data.teams[i].$id;
+                        Navigator.of(context).push(_createRoute(ShowItems()));
+                      } catch (e) {
+                        print(e);
+                      }
+                    } else
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content:
+                              const Text('You Have No Access for this Subject'),
+                          backgroundColor: Color(0xff57b8eb),
+                          action: SnackBarAction(
+                            label: 'Ok',
+                            textColor: Colors.black,
+                            onPressed: () {
+                              // Code to execute.
+                            },
+                          ),
+                        ),
+                      );
+                  },
+                  materialvisibile,
+                  firstFavourite,
+                  () async {
+                    final SharedPreferences prefs =
+                        await SharedPreferences.getInstance();
+                    setState(() {
+                      if (prefs.getString("material") == "Favourite") {
+                        firstFavourite = Icon(Icons.star_border_outlined,
+                            size: 35, color: Colors.white);
+                        prefs.remove("material");
+                      } else {
+                        firstFavourite =
+                            Icon(Icons.star, size: 35, color: Colors.white);
+                        prefs.setString("material", "Favourite");
+                      }
+                    });
+                  },
+                );
+              },
+            );
+          }
+          return Center(child: CircularProgressIndicator());
+        });
+  }
+
+  SubjectCardList() {
+    return ListView(
+      physics: BouncingScrollPhysics(),
+      scrollDirection: Axis.horizontal,
+      children: [
+        Visibility(
+          visible: showTextCenter,
+          child: Center(
+            child: Text("You Have No Subscribed Subjects Here"),
+          ),
+        ),
+        Subject(
+          'assests/materiallec.png',
+          SubjectsList.documents[0].data['SubjectName'],
+          SubjectsList.documents[0].data['DoctorName'],
+          Color(0xff57b8eb),
+          () {
+            if (checkedSSL == true) {
+              try {
+                heightofpic = 150;
+                widthofpic = 145;
+                ImagetoShow = "assests/1.png";
+                buttonColor = Color(0xff57b8eb);
+                subjectaccess = "1111";
+                subjectname = SubjectsList.documents[0].data['\$id'];
+                Navigator.of(context).push(_createRoute(ShowItems()));
+              } catch (e) {
+                print(e);
+              }
+            } else
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('You Have No Access for this Subject'),
+                  backgroundColor: Color(0xff57b8eb),
+                  action: SnackBarAction(
+                    label: 'Ok',
+                    textColor: Colors.black,
+                    onPressed: () {
+                      // Code to execute.
+                    },
+                  ),
+                ),
+              );
+          },
+          materialvisibile,
+          firstFavourite,
+          () async {
+            final SharedPreferences prefs =
+                await SharedPreferences.getInstance();
+            setState(() {
+              if (prefs.getString("material") == "Favourite") {
+                firstFavourite = Icon(Icons.star_border_outlined,
+                    size: 35, color: Colors.white);
+                prefs.remove("material");
+              } else {
+                firstFavourite =
+                    Icon(Icons.star, size: 35, color: Colors.white);
+                prefs.setString("material", "Favourite");
+              }
+            });
+          },
+        ),
+        Subject(
+          'assests/2.png',
+          SubjectsList.documents[1].data['SubjectName'],
+          SubjectsList.documents[1].data['DoctorName'],
+          Color(0xffF9AF2A),
+          () async {
+            if (checkedSSL == true) {
+              try {
+                heightofpic = 150;
+                widthofpic = 150;
+
+                ImagetoShow = "assests/2.png";
+                buttonColor = Color(0xffF9AF2A);
+                subjectaccess = "1111";
+                subjectname = SubjectsList.documents[1].data['\$id'];
+                Navigator.of(context).push(_createRoute(ShowItems()));
+              } catch (e) {
+                print('Error');
+              }
+            } else
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('You Have No Access for this Subject'),
+                  backgroundColor: Color(0xffF9AF2A),
+                  action: SnackBarAction(
+                    label: 'Ok',
+                    textColor: Colors.black,
+                    onPressed: () {
+                      // Code to execute.
+                    },
+                  ),
+                ),
+              );
+          },
+          morphologyvisible,
+          secondFavourite,
+          () async {
+            final SharedPreferences prefs =
+                await SharedPreferences.getInstance();
+            setState(() {
+              if (prefs.getString("morphology") == "Favourite") {
+                secondFavourite = Icon(Icons.star_border_outlined,
+                    size: 35, color: Colors.white);
+                prefs.remove("morphology");
+              } else {
+                secondFavourite =
+                    Icon(Icons.star, size: 35, color: Colors.white);
+                prefs.setString("morphology", "Favourite");
+              }
+            });
+          },
+        ),
+        Subject(
+          'assests/3.png',
+          SubjectsList.documents[2].data['SubjectName'],
+          SubjectsList.documents[2].data['DoctorName'],
+          Color(0xff737FB4),
+          () {
+            if (checkedSSL == true) {
+              try {
+                heightofpic = 150;
+                widthofpic = 150;
+
+                ImagetoShow = "assests/3.png";
+                buttonColor = Color(0xff737FB4);
+                subjectaccess = "1111";
+                subjectname = SubjectsList.documents[2].data['\$id'];
+                Navigator.of(context).push(_createRoute(ShowItems()));
+              } catch (e) {
+                print(e);
+              }
+            } else
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('You Have No Access for this Subject'),
+                  backgroundColor: Color(0xff737FB4),
+                  action: SnackBarAction(
+                    label: 'Ok',
+                    textColor: Colors.black,
+                    onPressed: () {
+                      // Code to execute.
+                    },
+                  ),
+                ),
+              );
+          },
+          anatomyvisibile,
+          thirdFavourite,
+          () async {
+            final SharedPreferences prefs =
+                await SharedPreferences.getInstance();
+            setState(() {
+              if (prefs.getString("anatomy") == "Favourite") {
+                thirdFavourite = Icon(Icons.star_border_outlined,
+                    size: 35, color: Colors.white);
+                prefs.remove("anatomy");
+              } else {
+                thirdFavourite =
+                    Icon(Icons.star, size: 35, color: Colors.white);
+                prefs.setString("anatomy", "Favourite");
+              }
+            });
+          },
+        ),
+        Subject(
+          'assests/4.png',
+          SubjectsList.documents[3].data['SubjectName'],
+          SubjectsList.documents[3].data['DoctorName'],
+          Color(0xff54AD66),
+          () {
+            if (checkedSSL == true) {
+              try {
+                heightofpic = 150;
+                widthofpic = 150;
+
+                ImagetoShow = "assests/4.png";
+                buttonColor = Color(0xff54AD66);
+                subjectname = SubjectsList.documents[3].data['\$id'];
+                subjectaccess = "1111";
+                Navigator.of(context).push(_createRoute(ShowItems()));
+              } catch (e) {
+                print('Error');
+              }
+            } else
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('You Have No Access for this Subject'),
+                  backgroundColor: Color(0xff54AD66),
+                  action: SnackBarAction(
+                    label: 'Ok',
+                    textColor: Colors.black,
+                    onPressed: () {
+                      // Code to execute.
+                    },
+                  ),
+                ),
+              );
+          },
+          histologyvisible,
+          forthFavourite,
+          () async {
+            final SharedPreferences prefs =
+                await SharedPreferences.getInstance();
+            setState(() {
+              if (prefs.getString("histology") == "Favourite") {
+                forthFavourite = Icon(Icons.star_border_outlined,
+                    size: 35, color: Colors.white);
+                prefs.remove("histology");
+              } else {
+                forthFavourite =
+                    Icon(Icons.star, size: 35, color: Colors.white);
+                prefs.setString("histology", "Favourite");
+              }
+            });
+          },
+        ),
+        Subject(
+          'assests/5.png',
+          SubjectsList.documents[4].data['SubjectName'],
+          SubjectsList.documents[4].data['DoctorName'],
+          Color(0xff5DD1D1),
+          () {
+            if (checkedSSL == true) {
+              try {
+                bottomposition = 10;
+                heightofpic = 150;
+                widthofpic = 150;
+
+                ImagetoShow = "assests/5.png";
+                buttonColor = Color(0xff5DD1D1);
+                subjectname = SubjectsList.documents[4].data['\$id'];
+                subjectaccess = "1111";
+                Navigator.of(context).push(_createRoute(ShowItems()));
+              } catch (e) {
+                print('Error');
+              }
+            } else
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('You Have No Access for this Subject'),
+                  backgroundColor: Color(0xff5DD1D1),
+                  action: SnackBarAction(
+                    label: 'Ok',
+                    textColor: Colors.black,
+                    onPressed: () {
+                      // Code to execute.
+                    },
+                  ),
+                ),
+              );
+          },
+          chemistryvisible,
+          fifthFavourite,
+          () async {
+            final SharedPreferences prefs =
+                await SharedPreferences.getInstance();
+            setState(() {
+              if (prefs.getString("chemistry") == "Favourite") {
+                fifthFavourite = Icon(Icons.star_border_outlined,
+                    size: 35, color: Colors.white);
+                prefs.remove("chemistry");
+              } else {
+                fifthFavourite =
+                    Icon(Icons.star, size: 35, color: Colors.white);
+                prefs.setString("chemistry", "Favourite");
+              }
+            });
+          },
+        ),
+        Subject(
+          'assests/6.png',
+          SubjectsList.documents[5].data['SubjectName'],
+          SubjectsList.documents[5].data['DoctorName'],
+          Color(0xff4E97EB),
+          () {
+            if (checkedSSL == true) {
+              try {
+                bottomposition = 10;
+                heightofpic = 150;
+                widthofpic = 150;
+
+                ImagetoShow = "assests/6.png";
+                buttonColor = Color(0xff4E97EB);
+                subjectname = SubjectsList.documents[5].data['\$id'];
+                subjectaccess = "1111";
+                Navigator.of(context).push(_createRoute(ShowItems()));
+              } catch (e) {
+                print('Error');
+              }
+            } else
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('You Have No Access for this Subject'),
+                  backgroundColor: Color(0xff4E97EB),
+                  action: SnackBarAction(
+                    label: 'Ok',
+                    textColor: Colors.black,
+                    onPressed: () {
+                      // Code to execute.
+                    },
+                  ),
+                ),
+              );
+          },
+          physicsvisibile,
+          sixthFavourite,
+          () async {
+            final SharedPreferences prefs =
+                await SharedPreferences.getInstance();
+            setState(() {
+              if (prefs.getString("physics") == "Favourite") {
+                sixthFavourite = Icon(Icons.star_border_outlined,
+                    size: 35, color: Colors.white);
+                prefs.remove("physics");
+              } else {
+                sixthFavourite =
+                    Icon(Icons.star, size: 35, color: Colors.white);
+                prefs.setString("physics", "Favourite");
+              }
+            });
+          },
+        ),
+        Subject(
+          'assests/7.png',
+          SubjectsList.documents[6].data['SubjectName'],
+          SubjectsList.documents[6].data['DoctorName'],
+          Color(0xffD390EC),
+          () {
+            if (checkedSSL == true) {
+              try {
+                bottomposition = -2;
+                heightofpic = 170;
+                widthofpic = 150;
+
+                ImagetoShow = "assests/7.png";
+                buttonColor = Color(0xffD390EC);
+                subjectname = SubjectsList.documents[6].data['\$id'];
+                subjectaccess = "1111";
+                Navigator.of(context).push(_createRoute(ShowItems()));
+              } catch (e) {
+                print('Error');
+              }
+            } else
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('You Have No Access for this Subject'),
+                  backgroundColor: Color(0xffD390EC),
+                  action: SnackBarAction(
+                    label: 'Ok',
+                    textColor: Colors.black,
+                    onPressed: () {
+                      // Code to execute.
+                    },
+                  ),
+                ),
+              );
+          },
+          zoologyvisible,
+          seventhFavourite,
+          () async {
+            final SharedPreferences prefs =
+                await SharedPreferences.getInstance();
+            setState(
+              () {
+                if (prefs.getString("zoology") == "Favourite") {
+                  seventhFavourite = Icon(Icons.star_border_outlined,
+                      size: 35, color: Colors.white);
+                  prefs.remove("zoology");
+                } else {
+                  seventhFavourite =
+                      Icon(Icons.star, size: 35, color: Colors.white);
+                  prefs.setString("zoology", "Favourite");
+                }
+              },
+            );
+          },
+        ),
+      ],
+    );
   }
 }
 
@@ -1842,13 +1909,13 @@ class Subject extends StatelessWidget {
 
 class SearchSubjectes extends SearchDelegate {
   var names = [
-    "Material",
-    "Morphology",
-    "Anatomy & Histo",
-    "Material 48",
-    "Head & Neck",
-    "Physiology",
-    "Pathology"
+    dotenv.env['Name1']!,
+    dotenv.env['Name2']!,
+    dotenv.env['Name3']!,
+    dotenv.env['Name4']!,
+    dotenv.env['Name5']!,
+    dotenv.env['Name6']!,
+    dotenv.env['Name7']!,
   ];
 
   @override
@@ -1875,1044 +1942,652 @@ class SearchSubjectes extends SearchDelegate {
 
   @override
   Widget buildResults(BuildContext context) {
-    List filternames =
-        names.where((element) => element.contains(query)).toList();
-    return ListView.builder(
-        itemCount: query == "" ? names.length : filternames.length,
-        itemBuilder: (context, i) {
-          return Container(
-            height: 120,
-            child: Row(
-              children: [
-                Container(
-                  width: widthofpic,
-                  height: heightofpic,
-                  child: Stack(
-                    children: [
-                      Image.asset(ImagetoShow),
-                      Positioned(
-                        bottom: -2,
-                        right: 10,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                              elevation: 8,
-                              primary: buttonColor,
-                              shape: new CircleBorder()),
-                          onPressed: () {
-                            if (query == "") {
-                              if (names[i] == "Material") {
-                                if (material != "0000" && checkedSSL == true) {
-                                  try {
-                                    heightofpic = 150;
-                                    widthofpic = 145;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/1.png";
-                                    buttonColor = Color(0xff57b8eb);
-                                    subjectaccess = material;
-                                    subjectname = "material";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
+    return FutureBuilder(
+        future: LoadCoursesVar,
+        builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return ListView.builder(
+                itemCount: query == ""
+                    ? snapshot.data.documents.length
+                    : filternames.length,
+                itemBuilder: (context, i) {
+                  return Container(
+                    height: 120,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: widthofpic,
+                          height: heightofpic,
+                          child: Stack(
+                            children: [
+                              Image.asset(ImagetoShow),
+                              Positioned(
+                                bottom: -2,
+                                right: 10,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                      elevation: 8,
+                                      primary: buttonColor,
+                                      shape: new CircleBorder()),
+                                  onPressed: () {
+                                    if (query == "") {
+                                      if (names[i] == "Material") {
+                                        if (material != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            heightofpic = 150;
+                                            widthofpic = 145;
 
-                              if (names[i] == "Morphology") {
-                                if (morphology != "0000" &&
-                                    checkedSSL == true) {
-                                  try {
-                                    heightofpic = 150;
-                                    widthofpic = 150;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/2.png";
-                                    buttonColor = Color(0xffF9AF2A);
-                                    subjectaccess = morphology;
-                                    subjectname = "morphology";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
+                                            ImagetoShow = "assests/1.png";
+                                            buttonColor = Color(0xff57b8eb);
+                                            subjectaccess = material;
+                                            subjectname = "material";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
 
-                              if (names[i] == "Anatomy") {
-                                if (anatomy != "0000" && checkedSSL == true) {
-                                  try {
-                                    heightofpic = 150;
-                                    widthofpic = 150;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/3.png";
-                                    buttonColor = Color(0xff737FB4);
-                                    subjectaccess = anatomy;
-                                    subjectname = "anatomy";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
+                                      if (names[i] == "Morphology") {
+                                        if (morphology != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            heightofpic = 150;
+                                            widthofpic = 150;
 
-                              if (names[i] == "Histology") {
-                                if (histology != "0000" && checkedSSL == true) {
-                                  try {
-                                    heightofpic = 150;
-                                    widthofpic = 150;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/4.png";
-                                    buttonColor = Color(0xff54AD66);
-                                    subjectaccess = histology;
-                                    subjectname = "histology";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
+                                            ImagetoShow = "assests/2.png";
+                                            buttonColor = Color(0xffF9AF2A);
+                                            subjectaccess = morphology;
+                                            subjectname = "morphology";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
 
-                              if (names[i] == "Chemistry") {
-                                if (chemistry != "0000" && checkedSSL == true) {
-                                  try {
-                                    bottomposition = 10;
-                                    heightofpic = 150;
-                                    widthofpic = 150;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/5.png";
-                                    buttonColor = Color(0xff5DD1D1);
-                                    subjectaccess = chemistry;
-                                    subjectname = "chemistry";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
+                                      if (names[i] == "Anatomy") {
+                                        if (anatomy != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            heightofpic = 150;
+                                            widthofpic = 150;
 
-                              if (names[i] == "Physics") {
-                                if (physics != "0000" && checkedSSL == true) {
-                                  try {
-                                    bottomposition = 10;
-                                    heightofpic = 150;
-                                    widthofpic = 150;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/6.png";
-                                    buttonColor = Color(0xff4E97EB);
-                                    subjectaccess = physics;
-                                    subjectname = "physics";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
+                                            ImagetoShow = "assests/3.png";
+                                            buttonColor = Color(0xff737FB4);
+                                            subjectaccess = anatomy;
+                                            subjectname = "anatomy";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
 
-                              if (names[i] == "Zoology") {
-                                if (zoology != "0000" && checkedSSL == true) {
-                                  try {
-                                    bottomposition = -2;
-                                    heightofpic = 170;
-                                    widthofpic = 150;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/7.png";
-                                    buttonColor = Color(0xffD390EC);
-                                    subjectaccess = zoology;
-                                    subjectname = "zoology";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
-                            } else {
-                              print(filternames[i]);
-                              if (filternames[i] == "Material") {
-                                if (material != "0000" && checkedSSL == true) {
-                                  try {
-                                    heightofpic = 150;
-                                    widthofpic = 145;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/1.png";
-                                    buttonColor = Color(0xff57b8eb);
-                                    subjectaccess = material;
-                                    subjectname = "material";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
+                                      if (names[i] == "Histology") {
+                                        if (histology != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            heightofpic = 150;
+                                            widthofpic = 150;
 
-                              if (filternames[i] == "Morphology") {
-                                if (morphology != "0000" &&
-                                    checkedSSL == true) {
-                                  try {
-                                    heightofpic = 150;
-                                    widthofpic = 150;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/2.png";
-                                    buttonColor = Color(0xffF9AF2A);
-                                    subjectaccess = morphology;
-                                    subjectname = "morphology";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
+                                            ImagetoShow = "assests/4.png";
+                                            buttonColor = Color(0xff54AD66);
+                                            subjectaccess = histology;
+                                            subjectname = "histology";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
 
-                              if (filternames[i] == "Anatomy") {
-                                if (anatomy != "0000" && checkedSSL == true) {
-                                  try {
-                                    heightofpic = 150;
-                                    widthofpic = 150;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/3.png";
-                                    buttonColor = Color(0xff737FB4);
-                                    subjectaccess = anatomy;
-                                    subjectname = "anatomy";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
+                                      if (names[i] == "Chemistry") {
+                                        if (chemistry != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            bottomposition = 10;
+                                            heightofpic = 150;
+                                            widthofpic = 150;
 
-                              if (filternames[i] == "Histology") {
-                                if (histology != "0000" && checkedSSL == true) {
-                                  try {
-                                    heightofpic = 150;
-                                    widthofpic = 150;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/4.png";
-                                    buttonColor = Color(0xff54AD66);
-                                    subjectaccess = histology;
-                                    subjectname = "histology";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
+                                            ImagetoShow = "assests/5.png";
+                                            buttonColor = Color(0xff5DD1D1);
+                                            subjectaccess = chemistry;
+                                            subjectname = "chemistry";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
 
-                              if (filternames[i] == "Chemistry") {
-                                if (chemistry != "0000" && checkedSSL == true) {
-                                  try {
-                                    bottomposition = 10;
-                                    heightofpic = 150;
-                                    widthofpic = 150;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/5.png";
-                                    buttonColor = Color(0xff5DD1D1);
-                                    subjectaccess = chemistry;
-                                    subjectname = "chemistry";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
+                                      if (names[i] == "Physics") {
+                                        if (physics != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            bottomposition = 10;
+                                            heightofpic = 150;
+                                            widthofpic = 150;
 
-                              if (filternames[i] == "Physics") {
-                                if (physics != "0000" && checkedSSL == true) {
-                                  try {
-                                    bottomposition = 10;
-                                    heightofpic = 150;
-                                    widthofpic = 150;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/6.png";
-                                    buttonColor = Color(0xff4E97EB);
-                                    subjectaccess = physics;
-                                    subjectname = "physics";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
+                                            ImagetoShow = "assests/6.png";
+                                            buttonColor = Color(0xff4E97EB);
+                                            subjectaccess = physics;
+                                            subjectname = "physics";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
 
-                              if (filternames[i] == "Zoology") {
-                                if (zoology != "0000" && checkedSSL == true) {
-                                  try {
-                                    bottomposition = -2;
-                                    heightofpic = 170;
-                                    widthofpic = 150;
-                                    currentButton == stats.Practical
-                                        ? intialindex = 1
-                                        : intialindex = 0;
-                                    ImagetoShow = "assests/7.png";
-                                    buttonColor = Color(0xffD390EC);
-                                    subjectaccess = zoology;
-                                    subjectname = "zoology";
-                                    Navigator.of(context).push(_createRoute());
-                                  } catch (e) {
-                                    print('Error');
-                                  }
-                                } else
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: const Text(
-                                          'You Have No Access for this Subject'),
-                                      backgroundColor: Color(0xffF9AF2A),
-                                      action: SnackBarAction(
-                                        label: 'Ok',
-                                        textColor: Colors.black,
-                                        onPressed: () {
-                                          // Code to execute.
-                                        },
-                                      ),
-                                    ),
-                                  );
-                              }
-                            }
-                          },
-                          child: Icon(
-                            Icons.play_arrow,
-                            size: 25,
+                                      if (names[i] == "Zoology") {
+                                        if (zoology != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            bottomposition = -2;
+                                            heightofpic = 170;
+                                            widthofpic = 150;
+
+                                            ImagetoShow = "assests/7.png";
+                                            buttonColor = Color(0xffD390EC);
+                                            subjectaccess = zoology;
+                                            subjectname = "zoology";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
+                                    } else {
+                                      if (filternames[i] == "Material") {
+                                        if (material != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            heightofpic = 150;
+                                            widthofpic = 145;
+
+                                            ImagetoShow = "assests/1.png";
+                                            buttonColor = Color(0xff57b8eb);
+                                            subjectaccess = material;
+                                            subjectname = "material";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
+
+                                      if (filternames[i] == "Morphology") {
+                                        if (morphology != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            heightofpic = 150;
+                                            widthofpic = 150;
+
+                                            ImagetoShow = "assests/2.png";
+                                            buttonColor = Color(0xffF9AF2A);
+                                            subjectaccess = morphology;
+                                            subjectname = "morphology";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
+
+                                      if (filternames[i] == "Anatomy") {
+                                        if (anatomy != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            heightofpic = 150;
+                                            widthofpic = 150;
+
+                                            ImagetoShow = "assests/3.png";
+                                            buttonColor = Color(0xff737FB4);
+                                            subjectaccess = anatomy;
+                                            subjectname = "anatomy";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
+
+                                      if (filternames[i] == "Histology") {
+                                        if (histology != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            heightofpic = 150;
+                                            widthofpic = 150;
+
+                                            ImagetoShow = "assests/4.png";
+                                            buttonColor = Color(0xff54AD66);
+                                            subjectaccess = histology;
+                                            subjectname = "histology";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
+
+                                      if (filternames[i] == "Chemistry") {
+                                        if (chemistry != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            bottomposition = 10;
+                                            heightofpic = 150;
+                                            widthofpic = 150;
+
+                                            ImagetoShow = "assests/5.png";
+                                            buttonColor = Color(0xff5DD1D1);
+                                            subjectaccess = chemistry;
+                                            subjectname = "chemistry";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
+
+                                      if (filternames[i] == "Physics") {
+                                        if (physics != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            bottomposition = 10;
+                                            heightofpic = 150;
+                                            widthofpic = 150;
+
+                                            ImagetoShow = "assests/6.png";
+                                            buttonColor = Color(0xff4E97EB);
+                                            subjectaccess = physics;
+                                            subjectname = "physics";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
+
+                                      if (filternames[i] == "Zoology") {
+                                        if (zoology != "0000" &&
+                                            checkedSSL == true) {
+                                          try {
+                                            bottomposition = -2;
+                                            heightofpic = 170;
+                                            widthofpic = 150;
+
+                                            ImagetoShow = "assests/7.png";
+                                            buttonColor = Color(0xffD390EC);
+                                            subjectaccess = zoology;
+                                            subjectname = "zoology";
+                                            Navigator.of(context).push(
+                                                _createRoute(ShowItems()));
+                                          } catch (e) {
+                                            print('Error');
+                                          }
+                                        } else
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: const Text(
+                                                  'You Have No Access for this Subject'),
+                                              backgroundColor:
+                                                  Color(0xffF9AF2A),
+                                              action: SnackBarAction(
+                                                label: 'Ok',
+                                                textColor: Colors.black,
+                                                onPressed: () {
+                                                  // Code to execute.
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                      }
+                                    }
+                                  },
+                                  child: Icon(
+                                    Icons.play_arrow,
+                                    size: 25,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: query == ""
-                      ? Text("${names[i]}")
-                      : Text("${filternames[i]}"),
-                ),
-              ],
-            ),
-          );
+                        Expanded(
+                          child: query == ""
+                              ? Text("${names[i]}")
+                              : Text("${filternames[i]}"),
+                        ),
+                      ],
+                    ),
+                  );
+                });
+          }
+          return Center(child: CircularProgressIndicator());
         });
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    List filternames =
-        names.where((element) => element.contains(query)).toList();
-    return ListView.builder(
-      itemCount: query == "" ? names.length : filternames.length,
-      itemBuilder: (context, i) {
-        return Container(
-          height: 120,
-          child: Row(
-            children: [
-              Container(
-                width: widthofpic,
-                height: heightofpic,
-                child: Stack(
-                  children: [
-                    Image.asset(ImagetoShow),
-                    Positioned(
-                      bottom: -2,
-                      right: 10,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                            elevation: 8,
-                            primary: buttonColor,
-                            shape: new CircleBorder()),
-                        onPressed: () {
-                          if (query == "") {
-                            if (names[i] == "Material") {
-                              if (material != "0000" && checkedSSL == true) {
-                                try {
-                                  heightofpic = 150;
-                                  widthofpic = 145;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/1.png";
-                                  buttonColor = Color(0xff57b8eb);
-                                  subjectaccess = material;
-                                  subjectname = "material";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
+    filternames = [];
+    filternames2 = [];
+    return FutureBuilder(
+        future: LoadCoursesVar,
+        builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            for (int i = 0; i < snapshot.data.documents.length; i++) {
+              filternames.add([
+                snapshot.data.documents[i].data['SubjectName'],
+                snapshot.data.documents[i].data['\$id']
+              ]);
+            }
+            filternames2 = filternames
+                .where((element) =>
+                    element.toString().toLowerCase().contains(query))
+                .toList();
+            return ListView.builder(
+              itemCount: query == ""
+                  ? snapshot.data.documents.length
+                  : filternames2.length,
+              itemBuilder: (context, i) {
+                return Container(
+                  height: 120,
+                  child: Row(
+                    children: [
+                      Container(
+                        width: widthofpic,
+                        height: heightofpic,
+                        child: Stack(
+                          children: [
+                            Image.asset(ImagetoShow),
+                            Positioned(
+                              bottom: -2,
+                              right: 10,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                    elevation: 8,
+                                    primary: buttonColor,
+                                    shape: new CircleBorder()),
+                                onPressed: () {
+                                  if (checkedSSL == true) {
+                                    bottomposition = -2;
+                                    heightofpic = 170;
+                                    widthofpic = 150;
 
-                            if (names[i] == "Morphology") {
-                              if (morphology != "0000" && checkedSSL == true) {
-                                try {
-                                  heightofpic = 150;
-                                  widthofpic = 150;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/2.png";
-                                  buttonColor = Color(0xffF9AF2A);
-                                  subjectaccess = morphology;
-                                  subjectname = "morphology";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-
-                            if (names[i] == "Anatomy") {
-                              if (anatomy != "0000" && checkedSSL == true) {
-                                try {
-                                  heightofpic = 150;
-                                  widthofpic = 150;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/3.png";
-                                  buttonColor = Color(0xff737FB4);
-                                  subjectaccess = anatomy;
-                                  subjectname = "anatomy";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-
-                            if (names[i] == "Histology") {
-                              if (histology != "0000" && checkedSSL == true) {
-                                try {
-                                  heightofpic = 150;
-                                  widthofpic = 150;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/4.png";
-                                  buttonColor = Color(0xff54AD66);
-                                  subjectaccess = histology;
-                                  subjectname = "histology";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-
-                            if (names[i] == "Chemistry") {
-                              if (chemistry != "0000" && checkedSSL == true) {
-                                try {
-                                  bottomposition = 10;
-                                  heightofpic = 150;
-                                  widthofpic = 150;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/5.png";
-                                  buttonColor = Color(0xff5DD1D1);
-                                  subjectaccess = chemistry;
-                                  subjectname = "chemistry";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-
-                            if (names[i] == "Physics") {
-                              if (physics != "0000" && checkedSSL == true) {
-                                try {
-                                  bottomposition = 10;
-                                  heightofpic = 150;
-                                  widthofpic = 150;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/6.png";
-                                  buttonColor = Color(0xff4E97EB);
-                                  subjectaccess = physics;
-                                  subjectname = "physics";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-
-                            if (names[i] == "Zoology") {
-                              if (zoology != "0000" && checkedSSL == true) {
-                                try {
-                                  bottomposition = -2;
-                                  heightofpic = 170;
-                                  widthofpic = 150;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/7.png";
-                                  buttonColor = Color(0xffD390EC);
-                                  subjectaccess = zoology;
-                                  subjectname = "zoology";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-                          } else {
-                            if (filternames[i] == "Material") {
-                              if (material != "0000" && checkedSSL == true) {
-                                try {
-                                  heightofpic = 150;
-                                  widthofpic = 145;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/1.png";
-                                  buttonColor = Color(0xff57b8eb);
-                                  subjectaccess = material;
-                                  subjectname = "material";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-
-                            if (filternames[i] == "Morphology") {
-                              if (morphology != "0000" && checkedSSL == true) {
-                                try {
-                                  heightofpic = 150;
-                                  widthofpic = 150;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/2.png";
-                                  buttonColor = Color(0xffF9AF2A);
-                                  subjectaccess = morphology;
-                                  subjectname = "morphology";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-
-                            if (filternames[i] == "Anatomy") {
-                              if (anatomy != "0000" && checkedSSL == true) {
-                                try {
-                                  heightofpic = 150;
-                                  widthofpic = 150;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/3.png";
-                                  buttonColor = Color(0xff737FB4);
-                                  subjectaccess = anatomy;
-                                  subjectname = "anatomy";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-
-                            if (filternames[i] == "Histology") {
-                              if (histology != "0000" && checkedSSL == true) {
-                                try {
-                                  heightofpic = 150;
-                                  widthofpic = 150;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/4.png";
-                                  buttonColor = Color(0xff54AD66);
-                                  subjectaccess = histology;
-                                  subjectname = "histology";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-
-                            if (filternames[i] == "Chemistry") {
-                              if (chemistry != "0000" && checkedSSL == true) {
-                                try {
-                                  bottomposition = 10;
-                                  heightofpic = 150;
-                                  widthofpic = 150;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/5.png";
-                                  buttonColor = Color(0xff5DD1D1);
-                                  subjectaccess = chemistry;
-                                  subjectname = "chemistry";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-
-                            if (filternames[i] == "Physics") {
-                              if (physics != "0000" && checkedSSL == true) {
-                                try {
-                                  bottomposition = 10;
-                                  heightofpic = 150;
-                                  widthofpic = 150;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/6.png";
-                                  buttonColor = Color(0xff4E97EB);
-                                  subjectaccess = physics;
-                                  subjectname = "physics";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-
-                            if (filternames[i] == "Zoology") {
-                              if (zoology != "0000" && checkedSSL == true) {
-                                try {
-                                  bottomposition = -2;
-                                  heightofpic = 170;
-                                  widthofpic = 150;
-                                  currentButton == stats.Practical
-                                      ? intialindex = 1
-                                      : intialindex = 0;
-                                  ImagetoShow = "assests/7.png";
-                                  buttonColor = Color(0xffD390EC);
-                                  subjectaccess = zoology;
-                                  subjectname = "zoology";
-                                  Navigator.of(context).push(_createRoute());
-                                } catch (e) {
-                                  print('Error');
-                                }
-                              } else
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text(
-                                        'You Have No Access for this Subject'),
-                                    backgroundColor: Color(0xffF9AF2A),
-                                    action: SnackBarAction(
-                                      label: 'Ok',
-                                      textColor: Colors.black,
-                                      onPressed: () {
-                                        // Code to execute.
-                                      },
-                                    ),
-                                  ),
-                                );
-                            }
-                          }
-                        },
-                        child: Icon(
-                          Icons.play_arrow,
-                          size: 25,
+                                    ImagetoShow = "assests/7.png";
+                                    buttonColor = Color(0xffD390EC);
+                                    subjectaccess = "1111";
+                                    if (query == "") {
+                                      subjectname = snapshot
+                                          .data.documents[i].data['\$id'];
+                                      Navigator.of(context)
+                                          .push(_createRoute(ShowItems()));
+                                    } else {
+                                      var videoIDs = filternames2[i]
+                                          .toString()
+                                          .substring(filternames2[i]
+                                                  .toString()
+                                                  .indexOf(',') +
+                                              2);
+                                      subjectname = videoIDs.substring(
+                                          0, videoIDs.indexOf(']'));
+                                      Navigator.of(context)
+                                          .push(_createRoute(ShowItems()));
+                                    }
+                                  }
+                                },
+                                child: Icon(
+                                  Icons.play_arrow,
+                                  size: 25,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: query == ""
-                    ? Text("${names[i]}")
-                    : Text("${filternames[i]}"),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+                      Expanded(
+                          child: query == ""
+                              ? Text(
+                                  "${snapshot.data.documents[i].data['SubjectName']}")
+                              : Text("${filternames2[i][0]}")),
+                    ],
+                  ),
+                );
+              },
+            );
+          }
+          return Center(child: CircularProgressIndicator());
+        });
   }
 }
 
-Route _createRoute() {
+Route _createRoute(var Page) {
   return PageRouteBuilder(
-    pageBuilder: (context, animation, secondaryAnimation) => const ShowItems(),
+    pageBuilder: (context, animation, secondaryAnimation) => Page,
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       const begin = Offset(0.0, 1.0);
       const end = Offset.zero;
@@ -3065,3 +2740,16 @@ Route _createRoute() {
 //     }
 //   }
 // }
+RecentlyCourses() {
+  var Recently = database.listDocuments(
+    collectionId: dotenv.env['Subjects']!,
+    limit: 7,
+    orderTypes: ["DESC"]
+  );
+  return Recently;
+}
+
+LoadMySubject() {
+  var LoadIt = teams.list();
+  return LoadIt;
+}

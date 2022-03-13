@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:691231482269:android:0ac65505857aac7ea00f74",
         "android_client_info": {
-          "package_name": "hammad.com.predent"
+          "package_name": "com.firstdentology.hammad"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "691231482269-3gks4ik088k8vjrcdv0i3a83d3k7ilv3.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "hammad.com.predent",
+            "package_name": "com.firstdentology.hammad",
             "certificate_hash": "5ab2f7c727cc115044cca9b034df5457ddcd284c"
           }
         },
@@ -42,7 +42,7 @@
               "client_id": "691231482269-qe0vl7fkaaj7uk8qjstrjonqknf2e9q9.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "prepdent.hammad.com.prepdent"
+                "bundle_id": "com.firstdentology.hammad.com"
               }
             }
           ]

@@ -27,6 +27,5 @@ Future checkSSL(String requestURL) async {
     });
     return checkedSSL;
   } catch (e) {
-    print("Not True SSL");
   }
 }

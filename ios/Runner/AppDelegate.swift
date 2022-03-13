@@ -10,4 +10,21 @@ import Flutter
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
+
+  func isRecording() ->Bool {
+
+          for screen in UIScreen.screens {
+
+              if (screen.isCaptured) {
+
+                  print("screen is recorded")
+
+                  return true
+
+              }
+
+          }
+          return false
+
+
 }

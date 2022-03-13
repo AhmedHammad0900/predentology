@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:appwrite/appwrite.dart';
 
 import 'package:flutter/material.dart';
 import 'package:predent/HomeScreen/HomeScreen.dart';
 import 'package:predent/JsonData/GetPost.dart';
 import 'package:predent/JsonData/SubjectData.dart';
+import 'package:predent/JsonData/ssl_pinning.dart';
 import 'package:predent/main.dart';
 import 'package:tab_indicator_styler/tab_indicator_styler.dart';
 import 'package:http/http.dart' as http;
@@ -12,10 +14,12 @@ import 'dart:convert' as convert;
 import 'dart:core';
 import 'package:better_player/better_player.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:predent/Videos/Show_Items.dart';
-
+import 'package:headset_connection_event/headset_event.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 late String subjectaccess;
-int intialindex = 0;
+String subjectnametoshow = "";
+
+int intialindex = 2;
 double heightofpic = 150;
 double widthofpic = 150;
 Color buttonColor = Color(0xffD390EC);
@@ -35,6 +39,8 @@ class ShowItems extends StatefulWidget {
 
 class _ShowItemsState extends State<ShowItems>
     with SingleTickerProviderStateMixin {
+  final _headsetPlugin = HeadsetEvent();
+  HeadsetState? _headsetState;
   TabController? _tabController;
   Future<dynamic>? fetchLec1;
   Future<dynamic>? fetchPrac1;
@@ -42,7 +48,7 @@ class _ShowItemsState extends State<ShowItems>
   Future<dynamic>? fetchPrac2;
 
   late BetterPlayerController _betterPlayerController = BetterPlayerController(
-      BetterPlayerConfiguration(),
+      BetterPlayerConfiguration(overlay: Text("ssss")),
       betterPlayerDataSource: betterPlayerDataSource);
   late BetterPlayerDataSource betterPlayerDataSource = BetterPlayerDataSource(
       BetterPlayerDataSourceType.network, CurrentPlaying);
@@ -53,24 +59,57 @@ class _ShowItemsState extends State<ShowItems>
   late String UrlPrac2;
   var myvideo;
   late String CurrentPlaying = "";
-  String VideoName = "Loading ..";
+  String VideoName = "No Data";
 
   @override
   void initState() {
     super.initState();
-    betterPlayerDataSource = BetterPlayerDataSource(
-        BetterPlayerDataSourceType.network, CurrentPlaying);
-    _betterPlayerController = BetterPlayerController(
-        BetterPlayerConfiguration(),
-        betterPlayerDataSource: betterPlayerDataSource);
-    _tabController =
-        new TabController(length: 4, vsync: this, initialIndex: intialindex);
-    if (subjectaccess != "0000") {
+    checkSSL(dotenv.env['API_SSL']!);
+    if (checkedSSL == true) {
+      betterPlayerDataSource = BetterPlayerDataSource(
+          BetterPlayerDataSourceType.network, CurrentPlaying);
+      _betterPlayerController = BetterPlayerController(
+          BetterPlayerConfiguration(
+            controlsConfiguration: (
+                BetterPlayerControlsConfiguration(
+                    enableMute: false
+                )
+            ),
+            overlay: Container(
+                child: Center(child: Text(GetAccountEmail.email))),
+          ),
+          betterPlayerDataSource: betterPlayerDataSource);
+      this._headsetState == HeadsetState.CONNECT
+          ? _betterPlayerController.setVolume(100)
+          : _betterPlayerController.setVolume(0);
+
+      _tabController =
+          new TabController(length: 4, vsync: this, initialIndex: intialindex);
       fetchLec1 = getJsonLec1();
       fetchLec2 = getJsonLec2();
       fetchPrac1 = getJsonPrac1();
       fetchPrac2 = getJsonPrac2();
     }
+
+    /// if headset is plugged
+    _headsetPlugin.getCurrentState.then((_val) {
+      setState(() {
+        _headsetState = _val;
+        this._headsetState == HeadsetState.CONNECT
+            ? _betterPlayerController.setVolume(100)
+            : _betterPlayerController.setVolume(0);
+      });
+    });
+
+    /// Detect the moment headset is plugged or unplugged
+    _headsetPlugin.setListener((_val) {
+      setState(() {
+        _headsetState = _val;
+        this._headsetState == HeadsetState.CONNECT
+            ? _betterPlayerController.setVolume(100)
+            : _betterPlayerController.setVolume(0);
+      });
+    });
   }
 
   @override
@@ -98,35 +137,42 @@ class _ShowItemsState extends State<ShowItems>
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Stack(
-              children: [
-                Container(
-                  color: Colors.white,
-                  height: MediaQuery.of(context).size.height * 0.332,
-                ),
-                Container(
-                  width: double.infinity,
-                  height: MediaQuery.of(context).size.height * 0.40,
-                  child: FutureBuilder(
-                    future:
-                        currentButton == stats.Practical ? fetchLec2 : fetchLec1,
-                    builder: (BuildContext context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done) {
-                        return BetterPlayer(
-                          controller: _betterPlayerController,
-                        );
-                      }
-                      return Center(child: CircularProgressIndicator());
-                    },
+            Padding(
+              padding: EdgeInsets.only(top: 30.0.h),
+              child: IconButton(onPressed: () {
+                Navigator.pop(context);
+              }, icon: Icon(Icons.arrow_back_ios)),
+            ),
+            Expanded(
+              child: Stack(
+                children: [
+                  Container(
+                    color: Colors.white,
+                    height: MediaQuery.of(context).size.height * 0.332,
                   ),
-                  decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(45),
-                        bottomRight: Radius.circular(20),
-                      )),
-                )
-              ],
+                  Container(
+                    width: double.infinity,
+                    height: MediaQuery.of(context).size.height * 0.40,
+                    child: FutureBuilder(
+                      future: fetchLec2,
+                      builder: (BuildContext context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.done) {
+                          return BetterPlayer(
+                            controller: _betterPlayerController,
+                          );
+                        }
+                        return Center(child: CircularProgressIndicator());
+                      },
+                    ),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(45),
+                          bottomRight: Radius.circular(20),
+                        )),
+                  )
+                ],
+              ),
             ),
             Column(
               children: [
@@ -148,7 +194,7 @@ class _ShowItemsState extends State<ShowItems>
                       Padding(
                         padding: const EdgeInsets.only(top: 10.0),
                         child: Text(
-                          subjectname.capitalize(),
+                          subjectnametoshow,
                           style: TextStyle(
                               fontFamily: 'OpenSans',
                               fontWeight: FontWeight.w600,
@@ -196,162 +242,160 @@ class _ShowItemsState extends State<ShowItems>
                       future: fetchLec1,
                       builder: (BuildContext context,
                           AsyncSnapshot<dynamic> snapshot) {
-                        if (subjectaccess[0] == "1") {
-                          if (!snapshot.hasData) {
-                            return Center(
-                                child: Text("There Are No Videos Uploaded Until Now"));
-                          }
-                          if (snapshot.connectionState == ConnectionState.done) {
-                            return ListView.builder(
-                              physics: BouncingScrollPhysics(),
-                              itemCount: snapshot.data.documents.length,
-                              itemBuilder: (context, i) {
-                                return Column(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      height: 120,
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            width: widthofpic,
-                                            height: heightofpic,
-                                            child: Stack(
-                                              children: [
-                                                Image.asset(ImagetoShow),
-                                                Positioned(
-                                                  bottom: bottomposition,
-                                                  right: 10,
-                                                  child: ElevatedButton(
-                                                    style: ElevatedButton.styleFrom(
-                                                        elevation: 8,
-                                                        primary: buttonColor,
-                                                        shape:
-                                                            new CircleBorder()),
-                                                    onPressed: () {
-                                                      if (CurrentPlaying !=
-                                                          dotenv.env[
-                                                                  'END_POINT']! +
-                                                              dotenv.env[
-                                                                  'LIST_STORAGE_FILES']! +
-                                                              snapshot
-                                                                      .data
-                                                                      .documents[i]
-                                                                      .data[
-                                                                  'UrlNormalQuality'] +
-                                                              "/view") {
-                                                        setState(() {
-                                                          VideoName = snapshot
-                                                              .data
-                                                              .documents[i]
-                                                              .data['Name'];
-                                                          CurrentPlaying = dotenv
-                                                                      .env[
-                                                                  'END_POINT']! +
-                                                              dotenv.env[
-                                                                  'LIST_STORAGE_FILES']! +
-                                                              snapshot
-                                                                      .data
-                                                                      .documents[i]
-                                                                      .data[
-                                                                  'UrlNormalQuality'] +
-                                                              "/view";
-                                                          if (snapshot
-                                                                      .data
-                                                                      .documents[i]
-                                                                      .data[
-                                                                  'urlHighQuality'] ==
-                                                              "null") {
-                                                            betterPlayerDataSource =
-                                                                BetterPlayerDataSource(
-                                                                    BetterPlayerDataSourceType
-                                                                        .network,
-                                                                    CurrentPlaying,
-                                                                    headers: {
-                                                                  'X-Appwrite-Project':
-                                                                      dotenv.env[
-                                                                          'PROJECT_ID']!,
-                                                                  'cookie':
-                                                                      cookie,
-                                                                });
-                                                            _betterPlayerController =
-                                                                BetterPlayerController(
-                                                                    BetterPlayerConfiguration(),
-                                                                    betterPlayerDataSource:
-                                                                        betterPlayerDataSource);
-                                                          } else {
-                                                            betterPlayerDataSource =
-                                                                BetterPlayerDataSource(
-                                                                    BetterPlayerDataSourceType
-                                                                        .network,
-                                                                    CurrentPlaying,
-                                                                    headers: {
-                                                                  'X-Appwrite-Project':
-                                                                      dotenv.env[
-                                                                          'PROJECT_ID']!,
-                                                                  'cookie':
-                                                                      cookie,
-                                                                },
-                                                                    resolutions: {
-                                                                  "Normal":
-                                                                      CurrentPlaying,
-                                                                  "HD": dotenv.env[
-                                                                          'END_POINT']! +
-                                                                      dotenv.env[
-                                                                          'LIST_STORAGE_FILES']! +
-                                                                      snapshot
-                                                                          .data
-                                                                          .documents[
-                                                                              i]
-                                                                          .data['UrlHighQuality'] +
-                                                                      "/view",
-                                                                });
-                                                            _betterPlayerController =
-                                                                BetterPlayerController(
-                                                                    BetterPlayerConfiguration(),
-                                                                    betterPlayerDataSource:
-                                                                        betterPlayerDataSource);
-                                                          }
-                                                        });
-                                                      }
-                                                    },
-                                                    child: Icon(
-                                                      Icons.play_arrow,
-                                                      size: 25,
-                                                    ),
+                        if (!snapshot.hasData && checkedSSL == true) {
+                          return Center(
+                              child: Text(
+                                  "There Are No Videos Uploaded Until Now"));
+                        }
+                        if (snapshot.connectionState == ConnectionState.done &&
+                            checkedSSL == true) {
+                          return ListView.builder(
+                            physics: BouncingScrollPhysics(),
+                            itemCount: 1,
+                            itemBuilder: (context, i) {
+                              return Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    height: 120,
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: widthofpic,
+                                          height: heightofpic,
+                                          child: Stack(
+                                            children: [
+                                              Image.asset(ImagetoShow),
+                                              Positioned(
+                                                bottom: bottomposition,
+                                                right: 10,
+                                                child: ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(
+                                                      elevation: 8,
+                                                      primary: buttonColor,
+                                                      shape:
+                                                          new CircleBorder()),
+                                                  onPressed: () {
+                                                    if (CurrentPlaying !=
+                                                        dotenv.env[
+                                                                'END_POINT']! +
+                                                            dotenv.env[
+                                                                'LIST_STORAGE_FILES']! + subjectname + "/files/" +                                                            snapshot
+                                                                    .data
+                                                                    .documents[i]
+                                                                    .data[
+                                                                'VideoID'] +
+                                                            "/view") {
+                                                      setState(() {
+                                                        VideoName = snapshot
+                                                            .data
+                                                            .documents[i]
+                                                            .data['Name'];
+                                                        CurrentPlaying = dotenv
+                                                                    .env[
+                                                                'END_POINT']! +
+                                                            dotenv.env[
+                                                                'LIST_STORAGE_FILES']! + subjectname + "/files/" +
+                                                            snapshot
+                                                                    .data
+                                                                    .documents[i]
+                                                                    .data[
+                                                                'VideoID'] +
+                                                            "/view";
+                                                        betterPlayerDataSource =
+                                                            BetterPlayerDataSource(
+                                                                BetterPlayerDataSourceType
+                                                                    .network,
+                                                                CurrentPlaying,
+                                                                headers: {
+                                                              'X-Appwrite-Project':
+                                                                  dotenv.env[
+                                                                      'PROJECT_ID']!,
+                                                              'cookie': cookie,
+                                                            });
+                                                        _betterPlayerController =
+                                                            BetterPlayerController(
+                                                                BetterPlayerConfiguration(
+                                                                  controlsConfiguration:
+                                                                      (BetterPlayerControlsConfiguration(
+                                                                          enableMute:
+                                                                              false)),
+                                                                  overlay:
+                                                                      Container(
+                                                                    width: MediaQuery.of(
+                                                                            context)
+                                                                        .size
+                                                                        .width,
+                                                                    height: MediaQuery.of(
+                                                                            context)
+                                                                        .size
+                                                                        .height,
+                                                                    child:
+                                                                        Center(
+                                                                      child:
+                                                                          Opacity(
+                                                                            opacity: 0.5,
+                                                                            child: Text(
+                                                                        GetAccountEmail
+                                                                              .email,
+                                                                        style: TextStyle(
+                                                                              fontSize: 35,
+                                                                              color:
+                                                                                  Colors.black),
+                                                                      ),
+                                                                          ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                                betterPlayerDataSource:
+                                                                    betterPlayerDataSource);
+                                                        this._headsetState ==
+                                                                HeadsetState
+                                                                    .CONNECT
+                                                            ? _betterPlayerController
+                                                                .setVolume(100)
+                                                            : _betterPlayerController
+                                                                .setVolume(0);
+                                                      });
+                                                    }
+                                                  },
+                                                  child: Icon(
+                                                    Icons.play_arrow,
+                                                    size: 25,
                                                   ),
                                                 ),
-                                              ],
-                                            ),
+                                              ),
+                                            ],
                                           ),
-                                          Expanded(
-                                            child: Text(
-                                                "${snapshot.data.documents[i].data['Name']}"),
-                                          ),
-                                        ],
-                                      ),
+                                        ),
+                                        Expanded(
+                                          child: Text(
+                                              "${snapshot.data.documents[i].data['Name']}"),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                );
-                              },
-                            );
-                          }
-                          return Center(child: CircularProgressIndicator());
+                                  ),
+                                ],
+                              );
+                            },
+                          );
                         }
-                        return Center(
-                            child: Text("You have No Access for this part"));
+                        return Center(child: CircularProgressIndicator());
                       }),
                   FutureBuilder(
-                      future: fetchLec2,
+                      future: fetchPrac1,
                       builder: (BuildContext context,
                           AsyncSnapshot<dynamic> snapshot) {
                         if (subjectaccess[1] == "1") {
-                          if (!snapshot.hasData) {
+                          if (!snapshot.hasData && checkedSSL == true) {
                             return Center(
-                                child: Text("There Are No Videos Uploaded Until Now"));
+                                child: Text(
+                                    "There Are No Videos Uploaded Until Now"));
                           }
-                          if (snapshot.connectionState == ConnectionState.done) {
+                          if (snapshot.connectionState ==
+                                  ConnectionState.done &&
+                              checkedSSL == true) {
                             return ListView.builder(
                               physics: BouncingScrollPhysics(),
                               itemCount: snapshot.data.documents.length,
@@ -384,12 +428,12 @@ class _ShowItemsState extends State<ShowItems>
                                                           dotenv.env[
                                                                   'END_POINT']! +
                                                               dotenv.env[
-                                                                  'LIST_STORAGE_FILES']! +
+                                                                  'LIST_STORAGE_FILES']! + subjectname + "files//" +
                                                               snapshot
                                                                       .data
                                                                       .documents[i]
                                                                       .data[
-                                                                  'UrlNormalQuality'] +
+                                                                  'VideoID'] +
                                                               "/view") {
                                                         setState(() {
                                                           VideoName = snapshot
@@ -400,69 +444,68 @@ class _ShowItemsState extends State<ShowItems>
                                                                       .env[
                                                                   'END_POINT']! +
                                                               dotenv.env[
-                                                                  'LIST_STORAGE_FILES']! +
+                                                                  'LIST_STORAGE_FILES']! + subjectname + "files//" +
                                                               snapshot
                                                                       .data
                                                                       .documents[i]
                                                                       .data[
-                                                                  'UrlNormalQuality'] +
+                                                                  'VideoID'] +
                                                               "/view";
-                                                          if (snapshot
-                                                                      .data
-                                                                      .documents[i]
-                                                                      .data[
-                                                                  'urlHighQuality'] ==
-                                                              "null") {
-                                                            betterPlayerDataSource =
-                                                                BetterPlayerDataSource(
-                                                                    BetterPlayerDataSourceType
-                                                                        .network,
-                                                                    CurrentPlaying,
-                                                                    headers: {
-                                                                  'X-Appwrite-Project':
-                                                                      dotenv.env[
-                                                                          'PROJECT_ID']!,
-                                                                  'cookie':
-                                                                      cookie,
-                                                                });
-                                                            _betterPlayerController =
-                                                                BetterPlayerController(
-                                                                    BetterPlayerConfiguration(),
-                                                                    betterPlayerDataSource:
-                                                                        betterPlayerDataSource);
-                                                          } else {
-                                                            betterPlayerDataSource =
-                                                                BetterPlayerDataSource(
-                                                                    BetterPlayerDataSourceType
-                                                                        .network,
-                                                                    CurrentPlaying,
-                                                                    headers: {
-                                                                  'X-Appwrite-Project':
-                                                                      dotenv.env[
-                                                                          'PROJECT_ID']!,
-                                                                  'cookie':
-                                                                      cookie,
-                                                                },
-                                                                    resolutions: {
-                                                                  "Normal":
-                                                                      CurrentPlaying,
-                                                                  "HD": dotenv.env[
-                                                                          'END_POINT']! +
-                                                                      dotenv.env[
-                                                                          'LIST_STORAGE_FILES']! +
-                                                                      snapshot
-                                                                          .data
-                                                                          .documents[
-                                                                              i]
-                                                                          .data['UrlHighQuality'] +
-                                                                      "/view",
-                                                                });
-                                                            _betterPlayerController =
-                                                                BetterPlayerController(
-                                                                    BetterPlayerConfiguration(),
-                                                                    betterPlayerDataSource:
-                                                                        betterPlayerDataSource);
-                                                          }
+                                                          betterPlayerDataSource =
+                                                              BetterPlayerDataSource(
+                                                                  BetterPlayerDataSourceType
+                                                                      .network,
+                                                                  CurrentPlaying,
+                                                                  headers: {
+                                                                'X-Appwrite-Project':
+                                                                    dotenv.env[
+                                                                        'PROJECT_ID']!,
+                                                                'cookie':
+                                                                    cookie,
+                                                              });
+                                                          _betterPlayerController =
+                                                              BetterPlayerController(
+                                                                  BetterPlayerConfiguration(
+                                                                    controlsConfiguration:
+                                                                        (BetterPlayerControlsConfiguration(
+                                                                            enableMute:
+                                                                                false)),
+                                                                    overlay:
+                                                                        Container(
+                                                                      width: MediaQuery.of(
+                                                                              context)
+                                                                          .size
+                                                                          .width,
+                                                                      height: MediaQuery.of(
+                                                                              context)
+                                                                          .size
+                                                                          .height,
+                                                                      child:
+                                                                          Center(
+                                                                        child:
+                                                                            Opacity(
+                                                                              opacity: 0.5,
+                                                                              child: Text(
+                                                                          GetAccountEmail
+                                                                                .email,
+                                                                          style: TextStyle(
+                                                                                fontSize: 35,
+                                                                                color: Colors.black),
+                                                                        ),
+                                                                            ),
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  betterPlayerDataSource:
+                                                                      betterPlayerDataSource);
+                                                          this._headsetState ==
+                                                                  HeadsetState
+                                                                      .CONNECT
+                                                              ? _betterPlayerController
+                                                                  .setVolume(
+                                                                      100)
+                                                              : _betterPlayerController
+                                                                  .setVolume(0);
                                                         });
                                                       }
                                                     },
@@ -494,15 +537,18 @@ class _ShowItemsState extends State<ShowItems>
                             child: Text("You have No Access for this part"));
                       }),
                   FutureBuilder(
-                      future: fetchPrac1,
+                      future: fetchLec2,
                       builder: (BuildContext context,
                           AsyncSnapshot<dynamic> snapshot) {
                         if (subjectaccess[2] == "1") {
-                          if (!snapshot.hasData) {
+                          if (!snapshot.hasData && checkedSSL == true) {
                             return Center(
-                                child: Text("There Are No Videos Uploaded Until Now"));
+                                child: Text(
+                                    "There Are No Videos Uploaded Until Now"));
                           }
-                          if (snapshot.connectionState == ConnectionState.done) {
+                          if (snapshot.connectionState ==
+                                  ConnectionState.done &&
+                              checkedSSL == true) {
                             return ListView.builder(
                               physics: BouncingScrollPhysics(),
                               itemCount: snapshot.data.documents.length,
@@ -535,12 +581,12 @@ class _ShowItemsState extends State<ShowItems>
                                                           dotenv.env[
                                                                   'END_POINT']! +
                                                               dotenv.env[
-                                                                  'LIST_STORAGE_FILES']! +
+                                                                  'LIST_STORAGE_FILES']! + subjectname + "/files/" +
                                                               snapshot
                                                                       .data
                                                                       .documents[i]
                                                                       .data[
-                                                                  'UrlNormalQuality'] +
+                                                                  'VideoID'] +
                                                               "/view") {
                                                         setState(() {
                                                           VideoName = snapshot
@@ -551,69 +597,68 @@ class _ShowItemsState extends State<ShowItems>
                                                                       .env[
                                                                   'END_POINT']! +
                                                               dotenv.env[
-                                                                  'LIST_STORAGE_FILES']! +
+                                                                  'LIST_STORAGE_FILES']! + subjectname + "/files/" +
                                                               snapshot
                                                                       .data
                                                                       .documents[i]
                                                                       .data[
-                                                                  'UrlNormalQuality'] +
+                                                                  'VideoID'] +
                                                               "/view";
-                                                          if (snapshot
-                                                                      .data
-                                                                      .documents[i]
-                                                                      .data[
-                                                                  'urlHighQuality'] ==
-                                                              "null") {
-                                                            betterPlayerDataSource =
-                                                                BetterPlayerDataSource(
-                                                                    BetterPlayerDataSourceType
-                                                                        .network,
-                                                                    CurrentPlaying,
-                                                                    headers: {
-                                                                  'X-Appwrite-Project':
-                                                                      dotenv.env[
-                                                                          'PROJECT_ID']!,
-                                                                  'cookie':
-                                                                      cookie,
-                                                                });
-                                                            _betterPlayerController =
-                                                                BetterPlayerController(
-                                                                    BetterPlayerConfiguration(),
-                                                                    betterPlayerDataSource:
-                                                                        betterPlayerDataSource);
-                                                          } else {
-                                                            betterPlayerDataSource =
-                                                                BetterPlayerDataSource(
-                                                                    BetterPlayerDataSourceType
-                                                                        .network,
-                                                                    CurrentPlaying,
-                                                                    headers: {
-                                                                  'X-Appwrite-Project':
-                                                                      dotenv.env[
-                                                                          'PROJECT_ID']!,
-                                                                  'cookie':
-                                                                      cookie,
-                                                                },
-                                                                    resolutions: {
-                                                                  "Normal":
-                                                                      CurrentPlaying,
-                                                                  "HD": dotenv.env[
-                                                                          'END_POINT']! +
-                                                                      dotenv.env[
-                                                                          'LIST_STORAGE_FILES']! +
-                                                                      snapshot
-                                                                          .data
-                                                                          .documents[
-                                                                              i]
-                                                                          .data['UrlHighQuality'] +
-                                                                      "/view",
-                                                                });
-                                                            _betterPlayerController =
-                                                                BetterPlayerController(
-                                                                    BetterPlayerConfiguration(),
-                                                                    betterPlayerDataSource:
-                                                                        betterPlayerDataSource);
-                                                          }
+                                                          betterPlayerDataSource =
+                                                              BetterPlayerDataSource(
+                                                                  BetterPlayerDataSourceType
+                                                                      .network,
+                                                                  CurrentPlaying,
+                                                                  headers: {
+                                                                'X-Appwrite-Project':
+                                                                    dotenv.env[
+                                                                        'PROJECT_ID']!,
+                                                                'cookie':
+                                                                    cookie,
+                                                              });
+                                                          _betterPlayerController =
+                                                              BetterPlayerController(
+                                                                  BetterPlayerConfiguration(
+                                                                    controlsConfiguration:
+                                                                        (BetterPlayerControlsConfiguration(
+                                                                            enableMute:
+                                                                                false)),
+                                                                    overlay:
+                                                                        Container(
+                                                                      width: MediaQuery.of(
+                                                                              context)
+                                                                          .size
+                                                                          .width,
+                                                                      height: MediaQuery.of(
+                                                                              context)
+                                                                          .size
+                                                                          .height,
+                                                                      child:
+                                                                          Center(
+                                                                        child:
+                                                                            Opacity(
+                                                                              opacity: 0.5,
+                                                                              child: Text(
+                                                                          GetAccountEmail
+                                                                                .email,
+                                                                          style: TextStyle(
+                                                                                fontSize: 35,
+                                                                                color: Colors.black),
+                                                                        ),
+                                                                            ),
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  betterPlayerDataSource:
+                                                                      betterPlayerDataSource);
+                                                          this._headsetState ==
+                                                                  HeadsetState
+                                                                      .CONNECT
+                                                              ? _betterPlayerController
+                                                                  .setVolume(
+                                                                      100)
+                                                              : _betterPlayerController
+                                                                  .setVolume(0);
                                                         });
                                                       }
                                                     },
@@ -648,11 +693,14 @@ class _ShowItemsState extends State<ShowItems>
                       builder: (BuildContext context,
                           AsyncSnapshot<dynamic> snapshot) {
                         if (subjectaccess[3] == "1") {
-                          if (!snapshot.hasData) {
+                          if (!snapshot.hasData && checkedSSL == true) {
                             return Center(
-                                child: Text("There Are No Videos Uploaded Until Now"));
+                                child: Text(
+                                    "There Are No Videos Uploaded Until Now"));
                           }
-                          if (snapshot.connectionState == ConnectionState.done) {
+                          if (snapshot.connectionState ==
+                                  ConnectionState.done &&
+                              checkedSSL == true) {
                             return ListView.builder(
                               physics: BouncingScrollPhysics(),
                               itemCount: snapshot.data.documents.length,
@@ -681,62 +729,90 @@ class _ShowItemsState extends State<ShowItems>
                                                         shape:
                                                             new CircleBorder()),
                                                     onPressed: () {
-                                                      setState(() {
-                                                        if (CurrentPlaying !=
-                                                            snapshot
-                                                                .data!
-                                                                .records![i]
-                                                                .fields
-                                                                .urlNormalQuality) {
-                                                          VideoName = snapshot
-                                                              .data!
-                                                              .records![i]
-                                                              .fields
-                                                              .name;
-                                                          CurrentPlaying = snapshot
-                                                              .data!
-                                                              .records![i]
-                                                              .fields
-                                                              .urlNormalQuality;
-                                                          if (snapshot
-                                                                  .data
-                                                                  .records[i]
-                                                                  .fields!
-                                                                  .urlHighQuality ==
-                                                              null) {
-                                                            betterPlayerDataSource =
-                                                                BetterPlayerDataSource(
-                                                                    BetterPlayerDataSourceType
-                                                                        .network,
-                                                                    CurrentPlaying);
-                                                            _betterPlayerController =
-                                                                BetterPlayerController(
-                                                                    BetterPlayerConfiguration(),
-                                                                    betterPlayerDataSource:
-                                                                        betterPlayerDataSource);
-                                                          } else {
-                                                            betterPlayerDataSource =
-                                                                BetterPlayerDataSource(
-                                                                    BetterPlayerDataSourceType
-                                                                        .network,
-                                                                    CurrentPlaying,
-                                                                    resolutions: {
-                                                                  "Normal":
-                                                                      CurrentPlaying,
-                                                                  "HD": snapshot
+                                                      if (CurrentPlaying !=
+                                                          dotenv.env[
+                                                                  'END_POINT']! +
+                                                              dotenv.env[
+                                                                  'LIST_STORAGE_FILES']! + subjectname + "/files/" +
+                                                              snapshot
                                                                       .data
-                                                                      .records[i]
-                                                                      .fields!
-                                                                      .urlHighQuality!,
-                                                                });
-                                                            _betterPlayerController =
-                                                                BetterPlayerController(
-                                                                    BetterPlayerConfiguration(),
-                                                                    betterPlayerDataSource:
-                                                                        betterPlayerDataSource);
-                                                          }
-                                                        }
-                                                      });
+                                                                      .documents[i]
+                                                                      .data[
+                                                                  'VideoID'] +
+                                                              "/view") {
+                                                        setState(() {
+                                                          VideoName = snapshot
+                                                              .data
+                                                              .documents[i]
+                                                              .data['Name'];
+                                                          CurrentPlaying = dotenv
+                                                                      .env[
+                                                                  'END_POINT']! +
+                                                              dotenv.env[
+                                                                  'LIST_STORAGE_FILES']! + subjectname + "/files/" +
+                                                              snapshot
+                                                                      .data
+                                                                      .documents[i]
+                                                                      .data[
+                                                                  'VideoID'] +
+                                                              "/view";
+                                                          betterPlayerDataSource =
+                                                              BetterPlayerDataSource(
+                                                                  BetterPlayerDataSourceType
+                                                                      .network,
+                                                                  CurrentPlaying,
+                                                                  headers: {
+                                                                'X-Appwrite-Project':
+                                                                    dotenv.env[
+                                                                        'PROJECT_ID']!,
+                                                                'cookie':
+                                                                    cookie,
+                                                              });
+                                                          _betterPlayerController =
+                                                              BetterPlayerController(
+                                                                  BetterPlayerConfiguration(
+                                                                    controlsConfiguration:
+                                                                        (BetterPlayerControlsConfiguration(
+                                                                            enableMute:
+                                                                                false)),
+                                                                    overlay:
+                                                                        Container(
+                                                                      width: MediaQuery.of(
+                                                                              context)
+                                                                          .size
+                                                                          .width,
+                                                                      height: MediaQuery.of(
+                                                                              context)
+                                                                          .size
+                                                                          .height,
+                                                                      child:
+                                                                          Center(
+                                                                        child:
+                                                                            Opacity(
+                                                                              opacity: 0.5,
+                                                                              child: Text(
+                                                                          GetAccountEmail
+                                                                                .email,
+                                                                          style: TextStyle(
+                                                                                fontSize: 35,
+                                                                                color: Colors.black),
+                                                                        ),
+                                                                            ),
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                  betterPlayerDataSource:
+                                                                      betterPlayerDataSource);
+                                                          this._headsetState ==
+                                                                  HeadsetState
+                                                                      .CONNECT
+                                                              ? _betterPlayerController
+                                                                  .setVolume(
+                                                                      100)
+                                                              : _betterPlayerController
+                                                                  .setVolume(0);
+                                                        });
+                                                      }
                                                     },
                                                     child: Icon(
                                                       Icons.play_arrow,
@@ -749,7 +825,7 @@ class _ShowItemsState extends State<ShowItems>
                                           ),
                                           Expanded(
                                             child: Text(
-                                                "${snapshot.data!.records![i].fields.name}"),
+                                                "${snapshot.data.documents[i].data['Name']}"),
                                           ),
                                         ],
                                       ),
@@ -771,484 +847,234 @@ class _ShowItemsState extends State<ShowItems>
         ),
       ),
     );
-
   }
+
   onBackPressed() {
     Navigator.of(context).pop();
     _betterPlayerController.pause();
   }
-  getJsonLec1() async {
-    await whichSubjecttoShowLec1();
-    var response = await database.listDocuments(
-      collectionId: UrlLec1,
-    );
-    await client.cookieJar
-        .loadForRequest(Uri.parse(
-            "${dotenv.env['END_POINT']! + dotenv.env['LIST_STORAGE_FILES']! + response.documents.last.data['UrlNormalQuality']}"))
-        .then((cookies) {
-      cookie = getCookies(cookies);
-      if (cookie.isNotEmpty) {}
-    }).catchError((e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('UnAccepted Session'),
-          backgroundColor: Color(0xff57b8eb),
-          action: SnackBarAction(
-            label: 'Ok',
-            textColor: Colors.black,
-            onPressed: () {
-              // Code to execute.
-            },
-          ),
-        ),
-      );
-    });
-    if (subjectaccess[0] == "1" && intialindex == 0) {
-      setState(() {
-        VideoName = response.documents.last.data['Name'];
-        CurrentPlaying = dotenv.env['END_POINT']! +
-            dotenv.env['LIST_STORAGE_FILES']! +
-            response.documents.last.data['UrlNormalQuality'] +
-            "/view";
-        if (response.documents.last.data['UrlHighQuality'] == "null") {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying,
-              headers: {
-                'X-Appwrite-Project': dotenv.env['PROJECT_ID']!,
-                'cookie': cookie,
-              });
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        } else {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying,
-              headers: {
-                'X-Appwrite-Project': dotenv.env['PROJECT_ID']!,
-                'cookie': cookie,
-              },
-              resolutions: {
-                "Normal": CurrentPlaying,
-                "HD": dotenv.env['END_POINT']! +
-                    dotenv.env['LIST_STORAGE_FILES']! +
-                    response.documents.last.data['UrlHighQuality'] +
-                    "/view" +
-                    dotenv.env['PROJECT_ID']!,
-              });
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        }
-      });
-    } else if (subjectaccess[0] != "1" && intialindex == 0) {
-      setState(() {
-        VideoName = "UnAccepted Permission";
-        CurrentPlaying = "";
-        if (response.documents.last.data['UrlHighQuality'] == "") {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying);
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        } else {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying,
-              resolutions: {
-                "Normal": CurrentPlaying,
-                "HD": "",
-              });
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        }
-      });
-    }
 
-    return response;
+  getJsonLec1() async {
+    try {
+      var response = await database
+          .listDocuments(collectionId: subjectname, limit: 100, queries: [
+        Query.equal('Term', 'FirstTerm'),
+        Query.equal('LP', 'Lecture'),
+      ], orderTypes: [
+        "DESC"
+      ]);
+      print("${dotenv.env['END_POINT']! + dotenv.env['LIST_STORAGE_FILES']! + subjectname + "/files/" + response.documents.first.data['VideoID']}") ;
+      await client.cookieJar
+          .loadForRequest(Uri.parse(
+              "${dotenv.env['END_POINT']! + dotenv.env['LIST_STORAGE_FILES']! + subjectname + "/files/" + response.documents.first.data['VideoID']}"))
+          .then((cookies) {
+        cookie = getCookies(cookies);
+        if (cookie.isNotEmpty) {}
+      }).catchError((e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('UnAccepted Session'),
+            backgroundColor: Color(0xff57b8eb),
+            action: SnackBarAction(
+              label: 'Ok',
+              textColor: Colors.black,
+              onPressed: () {
+                // Code to execute.
+              },
+            ),
+          ),
+        );
+      });
+      // setState(() {
+      //   VideoName = response.documents.first.data['Name'];
+      //   CurrentPlaying = dotenv.env['END_POINT']! +
+      //       dotenv.env['LIST_STORAGE_FILES']! + subjectname + "files/" +
+      //       response.documents.first.data['VideoID'] +
+      //       "/view";
+      //   betterPlayerDataSource = BetterPlayerDataSource(
+      //       BetterPlayerDataSourceType.network, CurrentPlaying,
+      //       headers: {
+      //         'X-Appwrite-Project': dotenv.env['PROJECT_ID']!,
+      //         'cookie': cookie,
+      //       });
+      //   _betterPlayerController = BetterPlayerController(
+      //       BetterPlayerConfiguration(),
+      //       betterPlayerDataSource: betterPlayerDataSource);
+      // });
+
+      return response;
+    } catch (e) {}
   }
 
   getJsonLec2() async {
-    await whichSubjecttoShowLec2();
-    var response = await database.listDocuments(
-      collectionId: UrlLec2,
-    );
-    await client.cookieJar
-        .loadForRequest(Uri.parse(
-            "${dotenv.env['END_POINT']! + dotenv.env['LIST_STORAGE_FILES']! + response.documents.last.data['UrlNormalQuality']}"))
-        .then((cookies) {
-      cookie = getCookies(cookies);
-      if (cookie.isNotEmpty) {}
-    }).catchError((e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('UnAccepted Session'),
-          backgroundColor: Color(0xff57b8eb),
-          action: SnackBarAction(
-            label: 'Ok',
-            textColor: Colors.black,
-            onPressed: () {
-              // Code to execute.
-            },
-          ),
-        ),
-      );
-    });
-    if (subjectaccess[1] == "1" && intialindex == 1) {
-      setState(() {
-        VideoName = response.documents.last.data['Name'];
-        CurrentPlaying = dotenv.env['END_POINT']! +
-            dotenv.env['LIST_STORAGE_FILES']! +
-            response.documents.last.data['UrlNormalQuality'] +
-            "/view";
-        if (response.documents.last.data['UrlHighQuality'] == "null") {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying,
-              headers: {
-                'X-Appwrite-Project': dotenv.env['PROJECT_ID']!,
-                'cookie': cookie,
-              });
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        } else {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying,
-              headers: {
-                'X-Appwrite-Project': dotenv.env['PROJECT_ID']!,
-                'cookie': cookie,
+    try {
+      var response = await database
+          .listDocuments(collectionId: subjectname, limit: 100, queries: [
+        Query.equal('Term', 'SecondTerm'),
+        Query.equal('LP', 'Lecture'),
+      ], orderTypes: [
+        "DESC"
+      ]);
+      await client.cookieJar
+          .loadForRequest(Uri.parse(
+              "${dotenv.env['END_POINT']! + dotenv.env['LIST_STORAGE_FILES']! + subjectname + "/files/" + response.documents.first.data['VideoID']}"))
+          .then((cookies) {
+        cookie = getCookies(cookies);
+        if (cookie.isNotEmpty) {}
+      }).catchError((e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('UnAccepted Session'),
+            backgroundColor: Color(0xff57b8eb),
+            action: SnackBarAction(
+              label: 'Ok',
+              textColor: Colors.black,
+              onPressed: () {
+                // Code to execute.
               },
-              resolutions: {
-                "Normal": CurrentPlaying,
-                "HD": dotenv.env['END_POINT']! +
-                    dotenv.env['LIST_STORAGE_FILES']! +
-                    response.documents.last.data['UrlHighQuality'] +
-                    "/view" +
-                    dotenv.env['PROJECT_ID']!,
-              });
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        }
+            ),
+          ),
+        );
       });
-    } else if (subjectaccess[1] != "1" && intialindex == 1) {
       setState(() {
-        VideoName = "UnAccepted Permission";
-        CurrentPlaying = "";
-        if (response.documents.last.data['UrlHighQuality'] == "") {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying);
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        } else {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying,
-              resolutions: {
-                "Normal": CurrentPlaying,
-                "HD": "",
-              });
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        }
+        VideoName = response.documents.first.data['Name'];
+        CurrentPlaying = dotenv.env['END_POINT']! +
+            dotenv.env['LIST_STORAGE_FILES']! + subjectname + "/files/" +
+            response.documents.first.data['VideoID'] +
+            "/view";
+        betterPlayerDataSource = BetterPlayerDataSource(
+            BetterPlayerDataSourceType.network, CurrentPlaying,
+            headers: {
+              'X-Appwrite-Project': dotenv.env['PROJECT_ID']!,
+              'cookie': cookie,
+            });
+        _betterPlayerController = BetterPlayerController(
+            BetterPlayerConfiguration(
+              controlsConfiguration:
+                  (BetterPlayerControlsConfiguration(enableMute: false)),
+              overlay: Container(
+                width: MediaQuery.of(context).size.width,
+                height: MediaQuery.of(context).size.height,
+                child: Center(
+                  child: Opacity(
+                    opacity: 0.5,
+                    child: Text(
+                      GetAccountEmail.email,
+                      style: TextStyle(fontSize: 35, color: Colors.black),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            betterPlayerDataSource: betterPlayerDataSource);
+        this._headsetState == HeadsetState.CONNECT
+            ? _betterPlayerController.setVolume(100)
+            : _betterPlayerController.setVolume(0);
       });
-    }
 
-    return response;
+      return response;
+    } catch (e) {}
   }
 
   getJsonPrac1() async {
-    await whichSubjecttoShowPrac1();
-    var response = await database.listDocuments(
-      collectionId: UrlPrac1,
-    );
-    await client.cookieJar
-        .loadForRequest(Uri.parse(
-            "${dotenv.env['END_POINT']! + dotenv.env['LIST_STORAGE_FILES']! + response.documents.last.data['UrlNormalQuality']}"))
-        .then((cookies) {
-      cookie = getCookies(cookies);
-      if (cookie.isNotEmpty) {}
-    }).catchError((e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('UnAccepted Session'),
-          backgroundColor: Color(0xff57b8eb),
-          action: SnackBarAction(
-            label: 'Ok',
-            textColor: Colors.black,
-            onPressed: () {
-              // Code to execute.
-            },
-          ),
-        ),
-      );
-    });
-    if (subjectaccess[2] == "1" && intialindex == 2) {
-      setState(() {
-        VideoName = response.documents.last.data['Name'];
-        CurrentPlaying = dotenv.env['END_POINT']! +
-            dotenv.env['LIST_STORAGE_FILES']! +
-            response.documents.last.data['UrlNormalQuality'] +
-            "/view";
-        if (response.documents.last.data['UrlHighQuality'] == "null") {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying,
-              headers: {
-                'X-Appwrite-Project': dotenv.env['PROJECT_ID']!,
-                'cookie': cookie,
-              });
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        } else {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying,
-              headers: {
-                'X-Appwrite-Project': dotenv.env['PROJECT_ID']!,
-                'cookie': cookie,
+    try {
+      var response = await database
+          .listDocuments(collectionId: subjectname, limit: 100, queries: [
+        Query.equal('Term', 'FirstTerm'),
+        Query.equal('LP', 'Practical'),
+      ], orderTypes: [
+        "DESC"
+      ]);
+      await client.cookieJar
+          .loadForRequest(Uri.parse(
+              "${dotenv.env['END_POINT']! + dotenv.env['LIST_STORAGE_FILES']! + subjectname + "/files/" + response.documents.first.data['VideoID']}"))
+          .then((cookies) {
+        cookie = getCookies(cookies);
+        if (cookie.isNotEmpty) {}
+      }).catchError((e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('UnAccepted Session'),
+            backgroundColor: Color(0xff57b8eb),
+            action: SnackBarAction(
+              label: 'Ok',
+              textColor: Colors.black,
+              onPressed: () {
+                // Code to execute.
               },
-              resolutions: {
-                "Normal": CurrentPlaying,
-                "HD": dotenv.env['END_POINT']! +
-                    dotenv.env['LIST_STORAGE_FILES']! +
-                    response.documents.last.data['UrlHighQuality'] +
-                    "/view" +
-                    dotenv.env['PROJECT_ID']!,
-              });
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        }
+            ),
+          ),
+        );
       });
-    } else if (subjectaccess[2] != "1" && intialindex == 2) {
-      setState(() {
-        VideoName = "UnAccepted Permission";
-        CurrentPlaying = "";
-        if (response.documents.last.data['UrlHighQuality'] == "") {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying);
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        } else {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying,
-              resolutions: {
-                "Normal": CurrentPlaying,
-                "HD": "",
-              });
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        }
-      });
-    }
+      // setState(() {
+      //   VideoName = response.documents.first.data['Name'];
+      //   CurrentPlaying = dotenv.env['END_POINT']! +
+      //       dotenv.env['LIST_STORAGE_FILES']! + subjectname + "files/" +
+      //       response.documents.first.data['VideoID'] +
+      //       "/view";
+      //   betterPlayerDataSource = BetterPlayerDataSource(
+      //       BetterPlayerDataSourceType.network, CurrentPlaying,
+      //       headers: {
+      //         'X-Appwrite-Project': dotenv.env['PROJECT_ID']!,
+      //         'cookie': cookie,
+      //       });
+      //   _betterPlayerController = BetterPlayerController(
+      //       BetterPlayerConfiguration(),
+      //       betterPlayerDataSource: betterPlayerDataSource);
+      // });
 
-    return response;
+      return response;
+    } catch (e) {}
   }
 
   getJsonPrac2() async {
-    await whichSubjecttoShowPrac2();
-    var response = await database.listDocuments(
-      collectionId: UrlPrac2,
-    );
-    await client.cookieJar
-        .loadForRequest(Uri.parse(
-            "${dotenv.env['END_POINT']! + dotenv.env['LIST_STORAGE_FILES']! + response.documents.last.data['UrlNormalQuality']}"))
-        .then((cookies) {
-      cookie = getCookies(cookies);
-      if (cookie.isNotEmpty) {}
-    }).catchError((e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('UnAccepted Session'),
-          backgroundColor: Color(0xff57b8eb),
-          action: SnackBarAction(
-            label: 'Ok',
-            textColor: Colors.black,
-            onPressed: () {
-              // Code to execute.
-            },
-          ),
-        ),
-      );
-    });
-    if (subjectaccess[3] == "1" && intialindex == 3) {
-      setState(() {
-        VideoName = response.documents.last.data['Name'];
-        CurrentPlaying = dotenv.env['END_POINT']! +
-            dotenv.env['LIST_STORAGE_FILES']! +
-            response.documents.last.data['UrlNormalQuality'] +
-            "/view";
-        if (response.documents.last.data['UrlHighQuality'] == "null") {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying,
-              headers: {
-                'X-Appwrite-Project': dotenv.env['PROJECT_ID']!,
-                'cookie': cookie,
-              });
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        } else {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying,
-              headers: {
-                'X-Appwrite-Project': dotenv.env['PROJECT_ID']!,
-                'cookie': cookie,
+    try {
+      var response = await database
+          .listDocuments(collectionId: subjectname, limit: 100, queries: [
+        Query.equal('Term', 'SecondTerm'),
+        Query.equal('LP', 'Practical'),
+      ], orderTypes: [
+        "DESC"
+      ]);
+      await client.cookieJar
+          .loadForRequest(Uri.parse(
+              "${dotenv.env['END_POINT']! + dotenv.env['LIST_STORAGE_FILES']! + subjectname + "/files/" + response.documents.first.data['VideoID']}"))
+          .then((cookies) {
+        cookie = getCookies(cookies);
+        if (cookie.isNotEmpty) {}
+      }).catchError((e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('UnAccepted Session'),
+            backgroundColor: Color(0xff57b8eb),
+            action: SnackBarAction(
+              label: 'Ok',
+              textColor: Colors.black,
+              onPressed: () {
+                // Code to execute.
               },
-              resolutions: {
-                "Normal": CurrentPlaying,
-                "HD": dotenv.env['END_POINT']! +
-                    dotenv.env['LIST_STORAGE_FILES']! +
-                    response.documents.last.data['UrlHighQuality'] +
-                    "/view" +
-                    dotenv.env['PROJECT_ID']!,
-              });
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        }
+            ),
+          ),
+        );
       });
-    } else if (subjectaccess[3] != "1" && intialindex == 3) {
-      setState(() {
-        VideoName = "UnAccepted Permission";
-        CurrentPlaying = "";
-        if (response.documents.last.data['UrlHighQuality'] == "") {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying);
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        } else {
-          betterPlayerDataSource = BetterPlayerDataSource(
-              BetterPlayerDataSourceType.network, CurrentPlaying,
-              resolutions: {
-                "Normal": CurrentPlaying,
-                "HD": "",
-              });
-          _betterPlayerController = BetterPlayerController(
-              BetterPlayerConfiguration(),
-              betterPlayerDataSource: betterPlayerDataSource);
-        }
-      });
-    }
+      // setState(() {
+      //   VideoName = response.documents.first.data['Name'];
+      //   CurrentPlaying = dotenv.env['END_POINT']! +
+      //       dotenv.env['LIST_STORAGE_FILES']! + subjectname + "files/" +
+      //       response.documents.first.data['VideoID'] +
+      //       "/view";
+      //   betterPlayerDataSource = BetterPlayerDataSource(
+      //       BetterPlayerDataSourceType.network, CurrentPlaying,
+      //       headers: {
+      //         'X-Appwrite-Project': dotenv.env['PROJECT_ID']!,
+      //         'cookie': cookie,
+      //       });
+      //   _betterPlayerController = BetterPlayerController(
+      //       BetterPlayerConfiguration(),
+      //       betterPlayerDataSource: betterPlayerDataSource);
+      // });
 
-    return response;
-  }
-
-  whichSubjecttoShowLec1() {
-    if (subjectname == "material") {
-      UrlLec1 = dotenv.env['Subject1Lec1']!;
-    }
-    if (subjectname == "morphology") {
-      UrlLec1 = dotenv.env['Subject2Lec1']!;
-    }
-    if (subjectname == "anatomy") {
-      UrlLec1 = dotenv.env['Subject3Lec1']!;
-    }
-    if (subjectname == "histology") {
-      UrlLec1 = dotenv.env['Subject4Lec1']!;
-    }
-    if (subjectname == "chemistry") {
-      UrlLec1 = dotenv.env['Subject5Lec1']!;
-    }
-    if (subjectname == "physics") {
-      UrlLec1 = dotenv.env['Subject6Lec1']!;
-    }
-    if (subjectname == "zoology") {
-      UrlLec1 = dotenv.env['Subject7Lec1']!;
-    }
-  }
-
-  whichSubjecttoShowLec2() {
-    if (subjectname == "material") {
-      UrlLec2 = dotenv.env['Subject1Lec2']!;
-    }
-    if (subjectname == "morphology") {
-      UrlLec2 = dotenv.env['Subject2Lec2']!;
-    }
-    if (subjectname == "anatomy") {
-      UrlLec2 = dotenv.env['Subject3Lec2']!;
-    }
-    if (subjectname == "histology") {
-      UrlLec2 = dotenv.env['Subject4Lec2']!;
-    }
-    if (subjectname == "chemistry") {
-      UrlLec2 = dotenv.env['Subject5Lec2']!;
-    }
-    if (subjectname == "physics") {
-      UrlLec2 = dotenv.env['Subject6Lec2']!;
-    }
-    if (subjectname == "zoology") {
-      UrlLec2 = dotenv.env['Subject7Lec2']!;
-    }
-  }
-
-  whichSubjecttoShowPrac1() {
-    if (subjectname == "material") {
-      UrlPrac1 = dotenv.env['Subject1Prac1']!;
-    }
-    if (subjectname == "morphology") {
-      UrlPrac1 = dotenv.env['Subject2Prac1']!;
-    }
-    if (subjectname == "anatomy") {
-      UrlPrac1 = dotenv.env['Subject3Prac1']!;
-    }
-    if (subjectname == "histology") {
-      UrlPrac1 = dotenv.env['Subject4Prac1']!;
-    }
-    if (subjectname == "chemistry") {
-      UrlPrac1 = dotenv.env['Subject5Prac1']!;
-    }
-    if (subjectname == "physics") {
-      UrlPrac1 = dotenv.env['Subject6Prac1']!;
-    }
-    if (subjectname == "zoology") {
-      UrlPrac1 = dotenv.env['Subject7Prac1']!;
-    }
-  }
-
-  whichSubjecttoShowPrac2() {
-    if (subjectname == "material") {
-      UrlPrac2 = dotenv.env['Subject1Prac2']!;
-    }
-    if (subjectname == "morphology") {
-      UrlPrac2 = dotenv.env['Subject2Prac2']!;
-    }
-    if (subjectname == "anatomy") {
-      UrlPrac2 = dotenv.env['Subject3Prac2']!;
-    }
-    if (subjectname == "histology") {
-      UrlPrac2 = dotenv.env['Subject4Prac2']!;
-    }
-    if (subjectname == "chemistry") {
-      UrlPrac2 = dotenv.env['Subject5Prac2']!;
-    }
-    if (subjectname == "physics") {
-      UrlPrac2 = dotenv.env['Subject6Prac2']!;
-    }
-    if (subjectname == "zoology") {
-      UrlPrac2 = dotenv.env['Subject7Prac2']!;
-    }
-  }
-
-  whichIndextoFetch() {
-    if (intialindex == 0) {
-      return fetchLec1;
-    }
-    if (intialindex == 1) {
-      return fetchLec2;
-    }
-    if (intialindex == 2) {
-      return fetchPrac1;
-    }
-    return fetchPrac2;
-  }
-}
-
-extension StringExtension on String {
-  String capitalize() {
-    return "${this[0].toUpperCase()}${this.substring(1)}";
+      return response;
+    } catch (e) {}
   }
 }
